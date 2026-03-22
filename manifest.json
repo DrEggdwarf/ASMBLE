@@ -1,0 +1,17 @@
+{
+  "id": "asmble",
+  "name": {
+    "fr": "ASMBLE",
+    "en": "ASMBLE"
+  },
+  "description": {
+    "fr": "Debugger pédagogique x86-64 interactif",
+    "en": "Interactive x86-64 pedagogical debugger"
+  },
+  "group": "Security",
+  "modes": ["desktop"],
+  "defaultMode": "desktop",
+  "github": "https://github.com/DrEggdwarf/ASMBLE",
+  "color": "#3fb950",
+  "icon": "2D-lightning"
+}
