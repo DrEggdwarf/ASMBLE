@@ -156,7 +156,7 @@ export default function AsmDebugger() {
               {code.split('\n').map((_, i) => {
                 const lineNum = i + 1
                 if (lineNum !== cur.ip) return null
-                return <div key={i} className="asm-active-line-bg" style={{ top: `${i * 20}px` }} />
+                return <div key={i} className="asm-active-line-bg" style={{ top: `${8 + i * 20}px` }} />
               })}
               <textarea
                 ref={textareaRef}
