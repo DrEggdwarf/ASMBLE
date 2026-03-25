@@ -1,0 +1,40 @@
+# ASMBLE — Docker Compose
+#
+# Usage:
+#   docker compose up              # Build + run
+#   docker compose up --build      # Force rebuild
+#   docker compose down            # Stop
+#   docker compose logs -f         # Follow logs
+
+services:
+  asmble:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASMBLE_MAX_SESSIONS=10
+      - ASMBLE_CORS_ORIGINS=http://localhost:8080
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_PTRACE     # required for GDB
+      - DAC_OVERRIDE    # nginx pid/log files
+      - CHOWN           # nginx temp dir ownership
+      - SETUID          # supervisor → nginx worker
+      - SETGID
+    read_only: true
+    tmpfs:
+      - /tmp:size=128M,exec
+      - /run:size=8M
+      - /var/log:size=32M
+      - /var/lib/nginx:size=8M
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 512M
+    restart: unless-stopped

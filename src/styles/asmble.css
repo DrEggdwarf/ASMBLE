@@ -1,0 +1,3556 @@
+/* ============================================
+   ASMBLE — x86-64 Debugger UI
+   ============================================ */
+
+.asm-root {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0a0e14;
+  color: #d4d4d4;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  font-size: 15px;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+/* Header */
+.asm-header {
+  border-bottom: 1px solid #1e2430;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0d1117;
+  flex-shrink: 0;
+}
+
+.asm-logo {
+  color: #7aa2f7;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  font-size: 14px;
+}
+
+.asm-logo-accent { color: #9ece6a; }
+
+/* Flavor selector */
+.asm-flavor-select {
+  background: #141820;
+  color: #7a8394;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23565f6e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+
+.asm-flavor-select:hover { border-color: #3d5280; color: #b0b8c8; }
+.asm-flavor-select:focus { border-color: #7aa2f7; }
+
+.asm-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.asm-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.asm-ctrl-label {
+  font-size: 9px;
+  color: #484f5e;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+.asm-ctrl-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.asm-ctrl-sep {
+  width: 1px;
+  height: 28px;
+  background: #2a3040;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.asm-speed-label {
+  font-size: 9px;
+  color: #565f6e;
+  min-width: 32px;
+  text-align: center;
+}
+
+.asm-btn {
+  background: #1a1e28;
+  color: #7a8394;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.asm-btn:hover { background: #252b38; color: #b0b8c8; }
+.asm-btn:disabled { background: #12151c; color: #2a3040; cursor: default; }
+.asm-btn.active { color: #7aa2f7; border-color: #3d5280; }
+.asm-btn.primary.active { background: #1a4024; border-color: #2d6a3e; color: #9ece6a; }
+.asm-btn.run { background: #1a4024; border-color: #2d6a3e; color: #9ece6a; }
+.asm-btn.run:hover { background: #224a2e; border-color: #3fb950; color: #3fb950; }
+
+.asm-step-count {
+  color: #565f6e;
+  font-size: 10px;
+  padding: 0 4px;
+  min-width: 48px;
+  text-align: center;
+}
+.asm-step-count.stepping::after {
+  content: '';
+  display: inline-block;
+  width: 8px; height: 8px;
+  border: 1.5px solid #565f6e;
+  border-top-color: #7aa2f7;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: asm-spin .6s linear infinite;
+}
+@keyframes asm-spin { to { transform: rotate(360deg); } }
+.asm-live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 4px;
+  background: #565f6e;
+}
+.asm-live-dot.connected { background: #3fb950; }
+.asm-live-dot.connecting { background: #d29922; animation: asm-pulse 1s infinite; }
+.asm-live-dot.error { background: #f85149; }
+@keyframes asm-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Annotation */
+.asm-annotation {
+  background: #0d1117;
+  border-bottom: 1px solid #1e2430;
+  padding: 6px 10px;
+  color: #8b949e;
+  font-size: 11px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-height: 28px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.asm-annotation.jumped {
+  background: #111d33;
+  border-color: rgba(122, 162, 247, 0.25);
+  color: #89b4fa;
+}
+
+.asm-jump-badge {
+  color: #7aa2f7;
+  font-weight: 700;
+  background: #172240;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.asm-jump-badge.small { font-size: 9px; padding: 1px 6px; }
+
+/* Body: 3-column layout */
+.asm-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Columns */
+.asm-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.asm-col-editor {
+  min-width: 200px;
+  border-right: none;
+  background: #0a0e14;
+  flex-shrink: 0;
+}
+
+.asm-col-regs {
+  min-width: 200px;
+  border-right: none;
+  background: #0d1117;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.asm-col-tabs {
+  min-width: 200px;
+  background: #0d1117;
+}
+
+/* Collapsed right panel */
+.asm-col-collapsed {
+  width: 28px;
+  flex-shrink: 0;
+  background: #0d1117;
+  border-left: 1px solid #1e2430;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.asm-col-collapsed:hover { background: #161b22; }
+.asm-col-collapsed-icon { color: #565f6e; font-size: 12px; }
+.asm-col-collapsed:hover .asm-col-collapsed-icon { color: #b0b8c4; }
+
+.asm-tab-collapse {
+  background: none; border: none; cursor: pointer;
+  color: #565f6e; font-size: 10px; padding: 8px 6px;
+  transition: color 0.15s;
+}
+.asm-tab-collapse:hover { color: #b0b8c4; }
+
+/* Right panel toolbar */
+.asm-right-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #1e2430;
+  background: #0d1117;
+  flex-shrink: 0;
+}
+.asm-right-tool {
+  background: none; border: 1px solid transparent; cursor: pointer;
+  color: #565f6e; font-size: 10px; padding: 3px 10px; border-radius: 4px;
+  font-family: inherit; letter-spacing: 0.5px; transition: all 0.15s;
+}
+.asm-right-tool:hover { color: #b0b8c4; background: #161b22; }
+.asm-right-tool.active { color: #7aa2f7; border-color: rgba(122,162,247,0.3); background: rgba(122,162,247,0.08); }
+
+/* Stacked collapsible panels */
+.asm-col-right {
+  min-width: 200px;
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.asm-stacked-panels {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.asm-panel-section {
+  border-bottom: 1px solid #1e2430;
+}
+.asm-panel-section.collapsed { flex-shrink: 0; }
+.asm-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.asm-panel-section-header:hover { background: #161b22; }
+.asm-panel-section-arrow { color: #565f6e; font-size: 9px; width: 12px; text-align: center; }
+.asm-panel-section-body { /* content flows naturally */ }
+
+/* Console GDB drawer (side) */
+.asm-console-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: #0d1117;
+  border-left: 1px solid #1e2430;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0,0,0,.5);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+.asm-console-drawer.open { transform: translateX(0); }
+.asm-drawer-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+.asm-drawer-header .asm-section-title { flex: 1; }
+.asm-drawer-close {
+  background: none; border: none; cursor: pointer;
+  color: #565f6e; font-size: 16px; padding: 2px 6px;
+  transition: color 0.15s;
+}
+.asm-drawer-close:hover { color: #f7768e; }
+.asm-drawer-body { flex: 1; overflow-y: auto; }
+
+/* Eval popover */
+.asm-eval-popover {
+  position: fixed;
+  bottom: 60px; right: 20px;
+  width: 360px;
+  max-width: 90vw;
+  max-height: 400px;
+  background: #161b22;
+  border: 1px solid #1e2430;
+  border-radius: 8px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+.asm-eval-popover-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+.asm-eval-popover-header .asm-section-title { flex: 1; }
+.asm-eval-popover-body { flex: 1; overflow-y: auto; }
+
+.asm-col-header {
+  padding: 6px 14px;
+  border-bottom: 1px solid #1e2430;
+  color: #7a8394;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  background: #0d1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.asm-file-actions { margin-left: auto; display: flex; gap: 4px; }
+.asm-file-btn {
+  background: transparent; border: 1px solid #1e2430; color: #7a8394;
+  font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer;
+  text-transform: none; letter-spacing: 0;
+}
+.asm-file-btn:hover { background: #161b22; color: #d4d4d4; }
+
+/* Snippets dropdown */
+.asm-snippets-wrapper { position: relative; display: inline-block; }
+.asm-snippets-dropdown {
+  position: absolute; top: 100%; left: 0; z-index: 100;
+  background: #161b22; border: 1px solid #1e2430; border-radius: 6px;
+  padding: 4px 0; min-width: 160px; margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.asm-snippet-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; color: #b0b8c4; font-size: 12px;
+  padding: 6px 12px; cursor: pointer;
+}
+.asm-snippet-item:hover { background: #1e2430; color: #e6edf3; }
+
+/* Resize handles */
+.asm-resize-handle {
+  flex-shrink: 0;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.asm-resize-col {
+  width: 4px;
+  cursor: col-resize;
+  background: #1e2430;
+}
+
+.asm-resize-col:hover,
+.asm-resize-col:active {
+  background: #7aa2f7;
+}
+
+.asm-resize-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  background: #1e2430;
+}
+
+.asm-resize-row:hover,
+.asm-resize-row:active {
+  background: #7aa2f7;
+}
+
+.asm-editor {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.asm-line-nums {
+  width: 52px;
+  overflow: hidden;
+  background: #010409;
+  border-right: 1px solid #21262d;
+  padding-top: 8px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.asm-line-num-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 20px;
+  padding-right: 6px;
+  gap: 2px;
+}
+
+.asm-line-num-row.active { background: #0b2e13; }
+
+.asm-line-num {
+  color: #30363d;
+  font-size: 11px;
+  text-align: right;
+}
+
+.asm-line-num-row.active .asm-line-num { color: #3fb950; }
+
+.asm-rip-marker {
+  color: #3fb950;
+  font-size: 8px;
+}
+
+.asm-editor-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.asm-active-line-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: #0b2e13;
+  border-left: 2px solid #3fb950;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.asm-textarea {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: #e6edf3;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  tab-size: 2;
+  white-space: pre;
+  overflow-y: auto;
+  caret-color: #58a6ff;
+}
+
+/* Right panel - removed, using 3-col now */
+
+/* Registers — card-based with sub-register bars */
+.asm-regs-section {
+  padding: 0;
+  border-bottom: 1px solid #1e2430;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.asm-regs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+.asm-regs-filters {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.asm-regs-toggle {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6a7384;
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.asm-regs-toggle:hover {
+  border-color: #484f5a;
+  color: #c8cdd5;
+}
+
+.asm-regs-toggle.on {
+  background: rgba(122, 162, 247, 0.15);
+  border-color: rgba(122, 162, 247, 0.4);
+  color: #7aa2f7;
+}
+
+.asm-section-title {
+  color: #8b95a5;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+/* RIP indicator bar */
+.asm-rip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: #0d1520;
+  border-bottom: 1px solid #1e2430;
+  font-size: 12px;
+}
+
+.asm-rip-bar.changed { background: #0d1a28; }
+
+.asm-rip-label {
+  font-weight: 700;
+  color: #7aa2f7;
+  font-size: 11px;
+}
+
+.asm-rip-val {
+  color: #89b4fa;
+  font-variant-numeric: tabular-nums;
+}
+
+.asm-rip-instr {
+  color: #565f6e;
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Main register cards — vertical list */
+.asm-regcards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+}
+
+.asm-regcard {
+  background: #161b22;
+  border-radius: 5px;
+  border: 1px solid #21262d;
+  border-left: 3px solid #21262d;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.asm-regcard.changed {
+  background: #0f2018;
+  border-color: rgba(158, 206, 106, 0.3);
+  border-left-color: #9ece6a;
+}
+
+/* Card header: pill name + value + delta */
+.asm-regcard-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+}
+
+.asm-regcard-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8cdd5;
+  background: #2a3040;
+  padding: 2px 8px;
+  border-radius: 9px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.asm-regcard.changed .asm-regcard-pill {
+  background: rgba(158, 206, 106, 0.25);
+  color: #9ece6a;
+}
+
+.asm-regcard-val {
+  font-size: 12px;
+  color: #c8cdd5;
+  font-variant-numeric: tabular-nums;
+}
+
+.asm-regcard.changed .asm-regcard-val { color: #9ece6a; }
+
+/* Delta: old → new */
+.asm-regcard-delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.asm-delta-old { color: #f7768e; font-size: 10px; }
+.asm-delta-arrow { color: #565f6e; font-size: 10px; }
+.asm-delta-new { color: #9ece6a; font-weight: 600; font-size: 10px; }
+.asm-regcard-delta .asm-delta-diff { color: #7dcfff; font-size: 10px; margin-left: 2px; }
+.asm-regext-delta { color: #7dcfff; font-size: 10px; margin-left: auto; }
+
+/* Sparkline (kept in code, hidden for now — undecided) */
+.asm-sparkline {
+  display: none;
+}
+
+/* Sub-register bar — single row, proportional widths */
+.asm-regcard-bar {
+  display: flex;
+  height: 26px;
+  margin: 0 3px 3px;
+  border-radius: 3px;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.asm-regbar-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  transition: background-color 0.25s;
+  position: relative;
+}
+
+/* Upper 32 bits (unnamed) — hatched pattern */
+.asm-regbar-seg.upper {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.06) 3px,
+      rgba(255, 255, 255, 0.06) 5px
+    );
+}
+
+.asm-regbar-seg.upper.active {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.12) 3px,
+      rgba(255, 255, 255, 0.12) 5px
+    );
+}
+
+.asm-regbar-seg.upper .asm-seg-pill {
+  color: rgba(255, 255, 255, 0.25);
+  background: none;
+  font-size: 8px;
+}
+
+.asm-regbar-seg.upper .asm-seg-val {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 8px;
+}
+
+.asm-regbar-seg.upper.active .asm-seg-pill {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.asm-regbar-seg.upper.active .asm-seg-val {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.asm-seg-pill {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.asm-seg-val {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asm-regbar-seg.active .asm-seg-pill {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.asm-regbar-seg.active .asm-seg-val {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 700;
+}
+
+/* Extension registers — 2 column grid */
+.asm-regext-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 0;
+  padding: 2px 6px 4px;
+}
+
+.asm-regext {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.asm-regext.changed { background: #122117; }
+
+.asm-regext-name {
+  font-weight: 700;
+  color: #8b95a5;
+  min-width: 24px;
+  flex-shrink: 0;
+}
+
+.asm-regext.changed .asm-regext-name { color: #9ece6a; }
+
+.asm-regext-val {
+  color: #c8cdd5;
+  font-variant-numeric: tabular-nums;
+}
+
+.asm-regext.changed .asm-regext-val { color: #9ece6a; }
+
+/* Flags */
+.asm-flags {
+  padding: 6px 10px;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+
+.asm-flags .asm-section-title { margin-bottom: 4px; }
+
+.asm-flag {
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: #141820;
+  border: 1px solid #1e2430;
+  color: #565f6e;
+  font-size: 10px;
+  font-weight: 400;
+  transition: all 0.2s;
+}
+
+.asm-flag.active {
+  background: #2a1520;
+  border-color: #d95050;
+  color: #f7768e;
+  font-weight: 700;
+}
+
+.asm-flag-eq { opacity: 0.5; }
+
+/* Tabs */
+.asm-tabs {
+  display: flex;
+  border-bottom: 1px solid #1e2430;
+  background: #0d1117;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.asm-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 8px 16px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #565f6e;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.asm-tab:hover { color: #b0b8c8; }
+.asm-tab.active { color: #d4d4d4; border-bottom-color: #7aa2f7; }
+
+.asm-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Reference sub-tabs */
+.asm-reference { display: flex; flex-direction: column; height: 100%; }
+.asm-ref-tabs { display: flex; gap: 0; border-bottom: 1px solid #1e2430; background: #161b22; flex-shrink: 0; }
+.asm-ref-tab {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  padding: 6px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+  color: #565f6e; border-bottom: 2px solid transparent; transition: all 0.15s; font-weight: 500;
+}
+.asm-ref-tab:hover { color: #b0b8c8; }
+.asm-ref-tab.active { color: #c0caf5; border-bottom-color: #565f89; }
+
+.asm-empty { color: #30363d; font-size: 11px; padding: 10px 12px; }
+
+/* Stack — block tower */
+.asm-stack {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.asm-stack-label-high {
+  font-size: 9px;
+  color: #484f5a;
+  text-align: center;
+  padding-bottom: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.asm-stack-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asm-stack-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-left: 3px solid #21262d;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+/* RSP slot — teal accent */
+.asm-stack-slot.rsp {
+  background: #0d1f20;
+  border-color: rgba(115, 218, 202, 0.3);
+  border-left-color: #73daca;
+}
+
+/* RBP slot — orange accent */
+.asm-stack-slot.rbp {
+  background: #1a1510;
+  border-color: rgba(255, 158, 100, 0.3);
+  border-left-color: #ff9e64;
+}
+
+/* Above RBP — hatched (caller frame) */
+.asm-stack-slot.above {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      #161b22,
+      #161b22 3px,
+      #1a1e26 3px,
+      #1a1e26 5px
+    );
+  opacity: 0.6;
+}
+
+/* Below RSP — ghost (free space) */
+.asm-stack-slot.below {
+  opacity: 0.3;
+  border-style: dashed;
+}
+
+.asm-stack-slot-addr {
+  font-size: 10px;
+  color: #6a7384;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.asm-stack-slot.rsp .asm-stack-slot-addr,
+.asm-stack-slot.rbp .asm-stack-slot-addr {
+  color: #8b95a5;
+}
+
+.asm-stack-slot-val {
+  font-size: 12px;
+  color: #c8cdd5;
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asm-stack-slot-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.asm-stack-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+
+.asm-stack-tag.rsp-tag {
+  background: rgba(115, 218, 202, 0.2);
+  color: #73daca;
+}
+
+.asm-stack-tag.rbp-tag {
+  background: rgba(255, 158, 100, 0.2);
+  color: #ff9e64;
+}
+
+.asm-stack-slot-label {
+  font-size: 9px;
+  color: #7aa2f7;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.asm-stack-footer {
+  text-align: center;
+  padding-top: 6px;
+}
+
+.asm-stack-grow {
+  font-size: 10px;
+  color: #484f5a;
+}
+
+/* History */
+.asm-history { padding: 10px 12px; }
+
+.asm-history-item {
+  margin-bottom: 5px;
+  background: #141820;
+  border: 1px solid #1e2430;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.asm-history-item.latest { background: #181e28; border-color: #2a3040; }
+
+.asm-history-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+}
+
+.asm-history-instr { font-size: 12px; flex: 1; color: #b0b8c8; }
+.asm-history-item.latest .asm-history-instr { color: #e6edf3; }
+.asm-history-latest { color: #565f6e; font-size: 9px; }
+
+.asm-history-deltas {
+  padding: 4px 10px;
+  border-top: 1px solid #1e2430;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asm-history-delta { display: flex; gap: 8px; font-size: 10px; }
+.asm-delta-reg { color: #7a8394; min-width: 32px; }
+.asm-delta-from { color: #565f6e; }
+.asm-delta-arrow { color: #3a4050; }
+.asm-delta-to { color: #9ece6a; }
+.asm-delta-diff { color: #565f6e; }
+
+/* C → ASM */
+.asm-casm { display: flex; flex: 1; overflow: hidden; height: 100%; }
+
+.asm-casm-sidebar {
+  width: 38%;
+  border-right: 1px solid #1e2430;
+  overflow-y: auto;
+  background: #0d1117;
+}
+
+.asm-casm-cat {
+  padding: 5px 10px;
+  color: #565f6e;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  background: #141820;
+  border-bottom: 1px solid #1e2430;
+  position: sticky;
+  top: 0;
+  font-weight: 600;
+}
+
+.asm-casm-item {
+  padding: 7px 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid rgba(30, 36, 48, 0.5);
+  color: #7a8394;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.asm-casm-item:hover { color: #b0b8c8; background: rgba(20, 24, 32, 0.5); }
+
+.asm-casm-item.active {
+  background: #141820;
+  border-left-color: #7aa2f7;
+  color: #e6edf3;
+}
+
+.asm-casm-detail { flex: 1; overflow-y: auto; padding: 14px; }
+.asm-casm-title { color: #e6edf3; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+
+.asm-casm-note {
+  margin-top: 10px;
+  background: #141820;
+  border: 1px solid #1e2430;
+  border-left: 3px solid #7aa2f7;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #7a8394;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.asm-codeblock {
+  background: #0a0e14;
+  border: 1px solid #1e2430;
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow: auto;
+}
+
+.asm-codeblock-line {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre;
+}
+
+.asm-codeblock-line.comment { color: #565f6e; }
+.asm-codeblock-line.label { color: #e0af68; }
+
+/* Lexicon */
+.asm-lexicon { display: flex; flex-direction: column; height: 100%; }
+
+.asm-lexicon-bar {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e2430;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: #0d1117;
+  flex-shrink: 0;
+}
+
+.asm-lexicon-search {
+  background: #0a0e14;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: #d4d4d4;
+  font-size: 11px;
+  font-family: inherit;
+  flex: 1;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.asm-lexicon-search:focus {
+  border-color: #7aa2f7;
+}
+
+.asm-lexicon-tab {
+  background: none;
+  color: #565f6e;
+  border: 1px solid #1e2430;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.asm-lexicon-tab:hover { color: #b0b8c8; border-color: #2a3040; }
+
+.asm-lexicon-tab.active {
+  background: #1a1e28;
+  color: #d4d4d4;
+  border-color: #2a3040;
+}
+
+.asm-lexicon-content { flex: 1; overflow-y: auto; padding: 8px 12px; }
+
+.asm-lexicon-group { margin-bottom: 10px; }
+
+.asm-lexicon-group-title {
+  color: #565f6e;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #1e2430;
+  font-weight: 600;
+}
+
+.asm-lexicon-item {
+  background: #141820;
+  border: 1px solid #1e2430;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.asm-lexicon-item-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 3px;
+}
+
+.asm-lexicon-name { color: #e0af68; font-size: 11px; font-weight: 700; min-width: 70px; }
+.asm-lexicon-num { color: #7aa2f7; font-size: 11px; font-weight: 700; min-width: 30px; }
+.asm-lexicon-sname { color: #9ece6a; font-size: 11px; font-weight: 700; min-width: 90px; }
+.asm-lexicon-syntax { color: #565f6e; font-size: 10px; }
+.asm-lexicon-desc { color: #7a8394; font-size: 11px; line-height: 1.5; }
+
+/* ============================================
+   PRO CODE EDITOR
+   ============================================ */
+
+.asm-editor-pro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: #0a0e14;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* ─ Find & Replace bar ─ */
+.asm-ed-find-bar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 10px;
+  background: #141820;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+  z-index: 50;
+  position: relative;
+}
+
+.asm-ed-find-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.asm-ed-find-input {
+  background: #0a0e14;
+  border: 1px solid #2a3040;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #d4d4d4;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  width: 160px;
+  transition: border-color 0.15s;
+}
+
+.asm-ed-find-input:focus {
+  border-color: #7aa2f7;
+}
+
+.asm-ed-find-btn {
+  background: #1a1e28;
+  border: 1px solid #2a3040;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #7a8394;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.asm-ed-find-btn:hover { background: #252b38; color: #b0b8c8; }
+.asm-ed-find-btn.active { background: #172240; border-color: #3d5280; color: #7aa2f7; }
+
+.asm-ed-find-count {
+  color: #565f6e;
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+.asm-ed-find-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  color: #565f6e;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.asm-ed-find-close:hover { color: #d4d4d4; }
+
+/* ─ Editor body (row wrapper) ─ */
+.asm-ed-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ─ Line numbers ─ */
+.asm-ed-linenums {
+  width: 90px;
+  min-width: 60px;
+  overflow: hidden;
+  background: #0a0e14;
+  border-right: 1px solid #1e2430;
+  padding-top: 8px;
+  padding-left: 30px;
+  flex-shrink: 0;
+  user-select: none;
+  z-index: 2;
+  position: relative;
+}
+
+.asm-ed-linenum {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 20px;
+  padding-right: 8px;
+  gap: 2px;
+  transition: background 0.15s;
+}
+
+.asm-ed-linenum.active {
+  background: rgba(56, 139, 253, 0.08);
+}
+
+.asm-ed-linenum.hidden {
+  height: 20px;
+  visibility: hidden;
+}
+
+.asm-ed-linenum.has-error .asm-ed-linenum-n {
+  color: #f85149;
+}
+
+.asm-ed-linenum.has-warning .asm-ed-linenum-n {
+  color: #d29922;
+}
+
+/* ─ Fold toggle ─ */
+.asm-ed-fold-toggle {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #3a4050;
+  cursor: pointer;
+  border-radius: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+.asm-ed-fold-toggle:hover {
+  color: #d4d4d4;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.asm-ed-fold-toggle.folded {
+  color: #7aa2f7;
+}
+
+.asm-ed-fold-spacer {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.asm-ed-linenum-n {
+  color: #3a4050;
+  font-size: 11px;
+  text-align: right;
+  min-width: 20px;
+  transition: color 0.15s;
+}
+
+.asm-ed-linenum.active .asm-ed-linenum-n {
+  color: #e6edf3;
+}
+
+.asm-ed-rip {
+  color: #9ece6a;
+  font-size: 8px;
+  animation: asm-rip-pulse 2s ease-in-out infinite;
+}
+
+@keyframes asm-rip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ─ Editor content area ─ */
+.asm-ed-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─ Highlight + active line layer (scrolled via transform) ─ */
+.asm-ed-highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform;
+}
+
+/* ─ Highlight overlay ─ */
+.asm-ed-highlight {
+  position: relative;
+  margin: 0;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  letter-spacing: normal;
+  word-spacing: normal;
+  tab-size: 4;
+  white-space: pre;
+  overflow: visible;
+  pointer-events: auto;
+  color: transparent;
+  border: none;
+  background: transparent;
+}
+
+.asm-ed-highlight code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
+}
+
+/* ─ Active line highlight (positioned div) ─ */
+.asm-ed-active-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: rgba(56, 139, 253, 0.08);
+  border-left: 2px solid #3fb950;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: inset 0 0 30px rgba(56, 139, 253, 0.03);
+}
+
+/* ─ Token colors (VS Code dark+ inspired) ─ */
+.asm-tok-comment    { color: #6a737d; font-style: italic; }
+.asm-tok-keyword    { color: #569cd6; }
+.asm-tok-register   { color: #9cdcfe; }
+.asm-tok-number     { color: #b5cea8; }
+.asm-tok-string     { color: #ce9178; }
+.asm-tok-label-def  { color: #dcdcaa; font-weight: 600; }
+.asm-tok-label-ref  { color: #dcdcaa; }
+.asm-tok-directive  { color: #c586c0; }
+.asm-tok-section    { color: #4ec9b0; }
+.asm-tok-prefix     { color: #569cd6; font-style: italic; }
+.asm-tok-punctuation { color: #808080; }
+.asm-tok-plain      { color: #d4d4d4; }
+
+/* ─ Textarea (invisible, on top for input) ─ */
+.asm-ed-textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 20px;
+  letter-spacing: normal;
+  word-spacing: normal;
+  tab-size: 4;
+  white-space: pre;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: #aeafad;
+  z-index: 2;
+  -webkit-text-fill-color: transparent;
+}
+
+.asm-ed-textarea::selection {
+  background: rgba(56, 139, 253, 0.25);
+  -webkit-text-fill-color: transparent;
+}
+
+.asm-ed-textarea::-moz-selection {
+  background: rgba(56, 139, 253, 0.25);
+}
+
+/* ─ Autocomplete popup ─ */
+.asm-ac-popup {
+  position: absolute;
+  z-index: 100;
+  display: flex;
+  background: #141820;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.05);
+  max-height: 280px;
+  min-width: 260px;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.asm-ac-list {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 3px 0;
+}
+
+.asm-ac-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.08s;
+  white-space: nowrap;
+}
+
+.asm-ac-item:hover,
+.asm-ac-item.active {
+  background: #1a2540;
+}
+
+.asm-ac-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 10px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.asm-ac-kind-instruction { background: #1c394e; color: #569cd6; }
+.asm-ac-kind-register    { background: #1c3e4e; color: #9cdcfe; }
+.asm-ac-kind-directive   { background: #3e1c4e; color: #c586c0; }
+.asm-ac-kind-snippet     { background: #1c4e2e; color: #4ec9b0; }
+.asm-ac-kind-section     { background: #1c4e3e; color: #4ec9b0; }
+
+.asm-ac-label {
+  flex: 1;
+  color: #d4d4d4;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asm-ac-match {
+  color: #2aaaff;
+  font-weight: 600;
+}
+
+.asm-ac-kind-tag {
+  color: #6a737d;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+/* Autocomplete detail panel */
+.asm-ac-detail {
+  width: 260px;
+  border-left: 1px solid #2a3040;
+  padding: 10px 12px;
+  overflow-y: auto;
+  background: #181e28;
+}
+
+.asm-ac-detail-title {
+  color: #569cd6;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.asm-ac-detail-desc {
+  color: #9da5b4;
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ─ Instruction tooltip ─ */
+.asm-ed-tooltip {
+  position: absolute;
+  z-index: 90;
+  background: #141820;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  padding: 8px 12px;
+  max-width: 380px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: asm-tooltip-in 0.12s ease-out;
+}
+
+@keyframes asm-tooltip-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.asm-ed-tooltip-cat {
+  color: #6a737d;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+
+.asm-ed-tooltip-syntax {
+  color: #569cd6;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.asm-ed-tooltip-desc {
+  color: #9da5b4;
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ─ Scrollbar styling ─ */
+.asm-ed-textarea::-webkit-scrollbar,
+.asm-ed-highlight::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.asm-ed-textarea::-webkit-scrollbar-track,
+.asm-ed-highlight::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asm-ed-textarea::-webkit-scrollbar-thumb,
+.asm-ed-highlight::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.asm-ed-textarea::-webkit-scrollbar-thumb:hover,
+.asm-ed-highlight::-webkit-scrollbar-thumb:hover {
+  background: rgba(121, 121, 121, 0.5);
+  background-clip: content-box;
+}
+
+.asm-ed-textarea::-webkit-scrollbar-corner,
+.asm-ed-highlight::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ─ Indentation guides ─ */
+.asm-ed-indent-guide {
+  position: absolute;
+  width: 1px;
+  height: 20px;
+  background: #1e2430;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─ Error underlines ─ */
+.asm-ed-error-underline {
+  position: absolute;
+  height: 2px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.asm-ed-error-underline.error {
+  background: repeating-linear-gradient(
+    90deg,
+    #f85149 0px, #f85149 2px,
+    transparent 2px, transparent 4px
+  );
+}
+
+.asm-ed-error-underline.warning {
+  background: repeating-linear-gradient(
+    90deg,
+    #d29922 0px, #d29922 2px,
+    transparent 2px, transparent 4px
+  );
+}
+
+/* ─ Scope highlights (word under cursor) ─ */
+.asm-ed-scope-highlight {
+  position: absolute;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 0;
+  box-sizing: border-box;
+}
+
+/* ─ Find highlights ─ */
+.asm-ed-find-highlight {
+  position: absolute;
+  height: 20px;
+  background: rgba(234, 179, 8, 0.25);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 0;
+  box-sizing: border-box;
+}
+
+/* ─ Status bar (error count) ─ */
+.asm-ed-status-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 3px 12px;
+  background: #0d1117;
+  border-top: 1px solid #1e2430;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.asm-ed-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.asm-ed-status-item.err {
+  color: #f85149;
+}
+
+.asm-ed-status-item.warn {
+  color: #d29922;
+}
+
+/* ─ Breadcrumb ─ */
+.asm-ed-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  background: #0d1117;
+  border-bottom: 1px solid #1e2430;
+  font-size: 11px;
+  color: #8b949e;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.asm-ed-breadcrumb-sep {
+  margin: 0 4px;
+  color: #484f58;
+}
+
+.asm-ed-breadcrumb-part {
+  color: #8b949e;
+}
+
+.asm-ed-breadcrumb-part.current {
+  color: #c9d1d9;
+  font-weight: 600;
+}
+
+/* ─ Minimap ─ */
+.asm-ed-minimap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  border-left: 1px solid #1e2430;
+  background: #0d1117;
+}
+
+.asm-ed-minimap:hover {
+  opacity: 1;
+}
+
+/* ─ Context menu ─ */
+.asm-ed-ctxmenu {
+  position: absolute;
+  z-index: 200;
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+}
+
+.asm-ed-ctxmenu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 12px;
+  color: #c9d1d9;
+  cursor: pointer;
+  user-select: none;
+}
+
+.asm-ed-ctxmenu-item:hover {
+  background: #388bfd30;
+  color: #fff;
+}
+
+.asm-ed-ctxmenu-shortcut {
+  color: #484f58;
+  font-size: 10px;
+  margin-left: 16px;
+}
+
+.asm-ed-ctxmenu-sep {
+  height: 1px;
+  margin: 3px 8px;
+  background: #21262d;
+}
+
+/* ─ Ctrl+click link cursor ─ */
+.asm-ed-highlight [data-token-type="label-ref"]:hover,
+.asm-ed-highlight [data-token-type="label-def"]:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ============================================
+   TERMINAL OUTPUT PANEL
+   ============================================ */
+
+.asm-terminal {
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+  background: #0a0e14;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.asm-terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: #0d1117;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+
+.asm-terminal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asm-terminal-title {
+  color: #7a8394;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+}
+
+.asm-terminal-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.asm-terminal-action {
+  background: none;
+  border: none;
+  color: #565f6e;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.asm-terminal-action:hover {
+  color: #b0b8c8;
+  background: #1a1e28;
+}
+
+.asm-terminal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.asm-terminal-line {
+  color: #d4d4d4;
+  white-space: pre;
+}
+
+.asm-terminal-line.cmd {
+  color: #9ece6a;
+}
+
+.asm-terminal-line.err {
+  color: #f7768e;
+}
+
+.asm-terminal-line.out {
+  color: #e0e0e0;
+}
+
+.asm-terminal-line.step {
+  color: #565f6e;
+  font-size: 11px;
+}
+
+.asm-terminal-line.output {
+  color: #9ece6a;
+  font-weight: 500;
+}
+
+.asm-terminal-line.muted {
+  color: #565f6e;
+}
+
+.asm-terminal-line.info {
+  color: #7aa2f7;
+}
+
+.asm-terminal-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: #7a8394;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+.asm-terminal-blink {
+  animation: asm-cursor-blink 1s step-end infinite;
+}
+
+@keyframes asm-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.asm-terminal-restore {
+  background: #0d1117;
+  border: none;
+  border-top: 1px solid #1e2430;
+  padding: 4px 16px;
+  color: #565f6e;
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.asm-terminal-restore:hover {
+  background: #141820;
+  color: #7a8394;
+}
+
+/* Terminal scrollbar */
+.asm-terminal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.asm-terminal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.asm-terminal-body::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.3);
+  border-radius: 4px;
+}
+
+.asm-terminal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(121, 121, 121, 0.5);
+}
+
+/* ─── Speed slider ─────────────────────────────────────────────────────────── */
+
+.asm-speed-slider {
+  width: 60px;
+  height: 4px;
+  accent-color: #7aa2f7;
+  cursor: pointer;
+}
+
+/* ─── Flag hint ────────────────────────────────────────────────────────────── */
+
+.asm-flags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.asm-flag-hint {
+  font-size: 10px;
+  color: #7aa2f7;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(122, 162, 247, 0.08);
+  border-radius: 4px;
+  border-left: 2px solid #7aa2f7;
+  line-height: 1.4;
+}
+
+/* ─── Breakpoints ──────────────────────────────────────────────────────────── */
+
+.asm-ed-bp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff7b72;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(255, 123, 114, 0.5);
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+.asm-ed-linenum.has-bp {
+  background: rgba(255, 123, 114, 0.06);
+}
+
+.asm-ed-linenum-n {
+  position: relative;
+}
+
+/* ─── Jump arrows ──────────────────────────────────────────────────────────── */
+
+.asm-ed-jump-arrows {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.asm-ed-jump-arrow.active path { stroke-dasharray: 4 2; animation: jumpDash 0.5s linear infinite; }
+
+@keyframes jumpDash {
+  to { stroke-dashoffset: -6; }
+}
+
+/* ─── Memory view ──────────────────────────────────────────────────────────── */
+
+.asm-memory-view {
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.asm-mem-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #21262d;
+  margin-bottom: 4px;
+}
+
+.asm-mem-section-name {
+  font-weight: 700;
+  color: #bb9af7;
+  font-size: 12px;
+}
+
+.asm-mem-section-range {
+  font-size: 10px;
+  color: #565f6e;
+  font-family: monospace;
+}
+
+.asm-mem-section-desc {
+  font-size: 10px;
+  color: #565f6e;
+}
+
+.asm-mem-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.asm-mem-entry {
+  display: grid;
+  grid-template-columns: 80px auto 1fr 2fr;
+  gap: 8px;
+  padding: 3px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.asm-mem-entry.active {
+  background: rgba(122, 162, 247, 0.15);
+}
+
+.asm-mem-addr {
+  color: #565f6e;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.asm-mem-label {
+  color: #e0af68;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.asm-mem-bytes {
+  color: #73daca;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.asm-mem-instr {
+  color: #c0caf5;
+  font-size: 11px;
+}
+
+/* ─── Convention d'appel ───────────────────────────────────────────────────── */
+
+.asm-convention {
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.asm-conv-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0caf5;
+  margin-bottom: 10px;
+}
+
+.asm-conv-section {
+  margin-bottom: 10px;
+}
+
+.asm-conv-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7aa2f7;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.asm-conv-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asm-conv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: #161b22;
+}
+
+.asm-conv-reg {
+  font-weight: 700;
+  color: #ff9e64;
+  font-size: 12px;
+  min-width: 32px;
+  font-family: monospace;
+}
+
+.asm-conv-role {
+  font-size: 11px;
+  color: #a9b1d6;
+}
+
+.asm-conv-regs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.asm-conv-reg-pill {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.asm-conv-reg-pill.caller {
+  background: rgba(255, 123, 114, 0.15);
+  color: #ff7b72;
+  border: 1px solid rgba(255, 123, 114, 0.3);
+}
+
+.asm-conv-reg-pill.callee {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.asm-conv-notes {
+  margin-top: 8px;
+  border-top: 1px solid #21262d;
+  padding-top: 8px;
+}
+
+.asm-conv-note {
+  font-size: 10px;
+  color: #7d8590;
+  padding: 2px 0;
+  padding-left: 8px;
+  border-left: 2px solid #30363d;
+  margin-bottom: 4px;
+}
+
+/* ─── Modes d'adressage ────────────────────────────────────────────────────── */
+
+.asm-addressing {
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.asm-addr-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0caf5;
+  margin-bottom: 10px;
+}
+
+.asm-addr-item {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.asm-addr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.asm-addr-mode {
+  font-weight: 700;
+  color: #c0caf5;
+  font-size: 12px;
+}
+
+.asm-addr-formula {
+  font-family: monospace;
+  font-size: 11px;
+  color: #bb9af7;
+  background: rgba(187, 154, 247, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.asm-addr-syntax {
+  font-family: monospace;
+  font-size: 11px;
+  color: #73daca;
+  margin-bottom: 2px;
+}
+
+.asm-addr-desc {
+  font-size: 10px;
+  color: #7d8590;
+}
+
+/* ─── Eval view ────────────────────────────────────────────────────────────── */
+
+.asm-eval-view {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.asm-eval-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.asm-eval-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #c9d1d9;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  outline: none;
+}
+.asm-eval-input:focus {
+  border-color: #388bfd;
+}
+.asm-eval-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.asm-eval-results {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.asm-eval-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.asm-eval-expr {
+  color: #7aa2f7;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  flex-shrink: 0;
+}
+
+.asm-eval-value {
+  color: #3fb950;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  text-align: right;
+  word-break: break-all;
+}
+
+.asm-eval-hint {
+  font-size: 10px;
+  color: #484f5a;
+  padding: 8px;
+  line-height: 1.6;
+}
+
+/* ── Backtrace ──────────────────────────────────── */
+
+.asm-backtrace {
+  border-top: 1px solid #21262d;
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.asm-bt-frame {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  border-radius: 3px;
+}
+
+.asm-bt-frame.active {
+  background: #161b22;
+  border-left: 2px solid #388bfd;
+}
+
+.asm-bt-level {
+  color: #484f5a;
+  min-width: 20px;
+}
+
+.asm-bt-func {
+  color: #d2a8ff;
+  font-weight: 600;
+}
+
+.asm-bt-addr {
+  color: #484f5a;
+  font-size: 10px;
+}
+
+.asm-bt-file {
+  color: #7aa2f7;
+  font-size: 10px;
+  margin-left: auto;
+}
+
+/* ── Watchpoints ──────────────────────────────────── */
+
+.asm-watchpoints {
+  border-top: 1px solid #21262d;
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+.asm-wp-add {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.asm-wp-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.asm-wp-entry {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #161b22;
+  border-radius: 3px;
+  margin-bottom: 2px;
+}
+
+.asm-wp-expr {
+  color: #ff7b72;
+  flex: 1;
+}
+
+.asm-wp-kind {
+  color: #484f5a;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.asm-wp-remove {
+  background: none;
+  border: none;
+  color: #484f5a;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+.asm-wp-remove:hover {
+  color: #ff7b72;
+}
+
+/* ── Register Edit ──────────────────────────────── */
+
+.asm-reg-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #161b22;
+  border: 1px solid #388bfd;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+.asm-reg-edit-name {
+  color: #c9d1d9;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 28px;
+  text-transform: uppercase;
+}
+
+.asm-reg-edit-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  color: #3fb950;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+/* ── GDB Console ────────────────────────────────── */
+
+.asm-gdb-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.asm-gdb-console-bar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  align-items: center;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+}
+
+.asm-gdb-prompt {
+  color: #3fb950;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.asm-gdb-input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  padding: 4px 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.asm-gdb-console-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+
+.asm-gdb-entry {
+  margin-bottom: 8px;
+}
+
+.asm-gdb-cmd {
+  color: #3fb950;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.asm-gdb-result {
+  color: #c9d1d9;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid #21262d;
+}
+
+/* ── Program Args Input ─────────────────────────── */
+
+.asm-args-input {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  padding: 3px 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  width: 120px;
+}
+
+/* ── Section Clickable ──────────────────────────── */
+
+.asm-mem-section-clickable {
+  cursor: pointer;
+}
+
+.asm-mem-section-clickable:hover {
+  background: #21262d;
+}
+
+.asm-mem-val {
+  color: #3fb950;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+/* ============================================
+   QoL — Toast Notifications
+   ============================================ */
+
+.asm-toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 420px;
+}
+
+.asm-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: asm-toast-in 0.3s ease-out, asm-toast-out 0.3s ease-in 4.7s forwards;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.asm-toast.error {
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: #f7768e;
+}
+
+.asm-toast.success {
+  background: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  color: #3fb950;
+}
+
+.asm-toast.info {
+  background: rgba(122, 162, 247, 0.15);
+  border: 1px solid rgba(122, 162, 247, 0.4);
+  color: #7aa2f7;
+}
+
+.asm-toast-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.asm-toast-msg {
+  flex: 1;
+  word-break: break-word;
+}
+
+@keyframes asm-toast-in {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes asm-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(40px); }
+}
+
+/* ============================================
+   QoL — Terminal Drawer
+   ============================================ */
+
+.asm-terminal-drawer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0a0e14;
+  border-top: 1px solid #1e2430;
+  overflow: hidden;
+  position: relative;
+}
+
+.asm-terminal-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 20;
+  background: transparent;
+}
+
+.asm-terminal-resize:hover,
+.asm-terminal-resize:active {
+  background: #7aa2f7;
+}
+
+.asm-terminal-drawer-bar {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  background: #0d1117;
+  cursor: pointer;
+  flex-shrink: 0;
+  gap: 8px;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.asm-terminal-drawer-bar:hover {
+  background: #141820;
+}
+
+.asm-terminal-count {
+  color: #484f5a;
+  font-size: 10px;
+  flex: 1;
+}
+
+.asm-terminal-drawer .asm-terminal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1.7;
+  min-height: 0;
+}
+
+/* ============================================
+   QoL — Status Bar
+   ============================================ */
+
+.asm-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 12px;
+  background: #0d1117;
+  border-top: 1px solid #1e2430;
+  flex-shrink: 0;
+  height: 24px;
+  font-size: 11px;
+  user-select: none;
+}
+
+.asm-statusbar-item {
+  color: #7a8394;
+  padding: 0 10px;
+  cursor: default;
+  white-space: nowrap;
+  border-right: 1px solid #1e2430;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.asm-statusbar-item:hover {
+  background: #141820;
+  color: #b0b8c8;
+}
+
+.asm-statusbar-item:first-child {
+  cursor: pointer;
+}
+
+.asm-statusbar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #565f6e;
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.asm-statusbar-dot.connected { background: #3fb950; }
+.asm-statusbar-dot.connecting { background: #d29922; animation: asm-pulse 1s infinite; }
+.asm-statusbar-dot.error { background: #f85149; }
+
+.asm-statusbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.asm-statusbar-ref {
+  cursor: pointer;
+  border-right: none;
+  border-left: 1px solid #1e2430;
+}
+
+/* ============================================
+   QoL — Flags Inline Pills
+   ============================================ */
+
+.asm-flags-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.asm-flag-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: #141820;
+  border: 1px solid #1e2430;
+  color: #484f5a;
+  cursor: default;
+  transition: all 0.2s ease;
+  min-width: 28px;
+  text-align: center;
+}
+
+.asm-flag-pill.active {
+  background: rgba(248, 81, 73, 0.15);
+  border-color: rgba(248, 81, 73, 0.4);
+  color: #f7768e;
+  font-weight: 700;
+}
+
+.asm-flag-pill.pulse {
+  animation: asm-flag-pulse 0.4s ease-out;
+}
+
+@keyframes asm-flag-pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.25); box-shadow: 0 0 8px rgba(248, 81, 73, 0.4); }
+  100% { transform: scale(1); }
+}
+
+.asm-flag-hint-inline {
+  font-size: 10px;
+  color: #7aa2f7;
+  margin-left: 4px;
+  padding: 2px 8px;
+  background: rgba(122, 162, 247, 0.08);
+  border-radius: 4px;
+  border-left: 2px solid #7aa2f7;
+}
+
+/* ============================================
+   QoL — Empty State
+   ============================================ */
+
+.asm-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  background: #0a0e14;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.asm-empty-icon {
+  font-size: 48px;
+  color: #1e2430;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.asm-empty-title {
+  font-size: 16px;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.asm-empty-hint {
+  font-size: 12px;
+  color: #484f5a;
+}
+
+.asm-empty-templates {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.asm-empty-tpl {
+  background: #141820;
+  border: 1px solid #2a3040;
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #7aa2f7;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.asm-empty-tpl:hover {
+  background: #1a2540;
+  border-color: #3d5280;
+  color: #89b4fa;
+  transform: translateY(-1px);
+}
+
+.asm-empty-tpl.blank {
+  background: transparent;
+  border-style: dashed;
+  color: #565f6e;
+}
+
+.asm-empty-tpl.blank:hover {
+  background: #141820;
+  color: #8b949e;
+}
+
+.asm-empty-shortcut {
+  margin-top: 16px;
+  font-size: 10px;
+  color: #30363d;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   QoL — Reference Modal
+   ============================================ */
+
+.asm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: asm-modal-fade-in 0.2s ease-out;
+}
+
+@keyframes asm-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.asm-modal {
+  background: #0d1117;
+  border: 1px solid #2a3040;
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.5);
+  animation: asm-modal-slide-in 0.25s ease-out;
+  overflow: hidden;
+}
+
+@keyframes asm-modal-slide-in {
+  from { opacity: 0; transform: translateY(-20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.asm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+
+.asm-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c0caf5;
+  letter-spacing: 0.5px;
+}
+
+.asm-modal-close {
+  background: none;
+  border: none;
+  color: #565f6e;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.asm-modal-close:hover { color: #d4d4d4; }
+
+.asm-modal .asm-ref-tabs {
+  border-bottom: 1px solid #1e2430;
+  flex-shrink: 0;
+}
+
+.asm-modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.asm-modal-body .asm-lexicon { height: auto; }
+.asm-modal-body .asm-convention { max-height: none; }
+.asm-modal-body .asm-addressing { max-height: none; }
+
+/* ============================================
+   QoL — Reference Button (Header)
+   ============================================ */
+
+.asm-ref-btn {
+  background: #141820;
+  border: 1px solid #2a3040;
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #7aa2f7;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.asm-ref-btn:hover {
+  background: #1a2540;
+  border-color: #3d5280;
+  color: #89b4fa;
+}
+
+/* ============================================
+   QoL — Smooth Animations
+   ============================================ */
+
+/* Smooth register value transitions */
+.asm-regcard {
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+}
+
+.asm-regcard.changed {
+  animation: asm-reg-flash 0.4s ease-out;
+}
+
+@keyframes asm-reg-flash {
+  0%   { background: #1a3020; }
+  100% { background: #0f2018; }
+}
+
+/* Smooth extension register transitions */
+.asm-regext {
+  transition: background 0.25s ease;
+}
+
+/* Active line smooth transition in editor */
+.asm-ed-active-line {
+  transition: top 0.15s ease-out;
+}
+
+/* Smooth tab transitions */
+.asm-tab-content {
+  animation: asm-tab-fade 0.15s ease-out;
+}
+
+@keyframes asm-tab-fade {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
+}
+
+/* Stack slot transitions */
+.asm-stack-slot {
+  transition: all 0.25s ease;
+}
+
+/* Annotation bar transition */
+.asm-annotation {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+/* RIP bar transition */
+.asm-rip-bar {
+  transition: background 0.2s ease;
+}
+
+/* Delta value flash */
+.asm-delta-new {
+  animation: asm-value-flash 0.5s ease-out;
+}
+
+@keyframes asm-value-flash {
+  0%   { color: #fff; }
+  100% { color: #9ece6a; }
+}
+
+/* ── Command Palette ── */
+.asm-palette {
+  position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+  width: min(520px, 90vw); background: #161b22; border: 1px solid #30363d;
+  border-radius: 10px; box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; max-height: 60vh; overflow: hidden;
+}
+.asm-palette-input {
+  width: 100%; padding: 12px 16px; background: transparent; border: none;
+  border-bottom: 1px solid #21262d; color: #d4d4d4; font-size: 15px;
+  font-family: inherit; outline: none;
+}
+.asm-palette-input::placeholder { color: #484f58; }
+.asm-palette-list { overflow-y: auto; max-height: 350px; padding: 4px 0; }
+.asm-palette-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 16px;
+  cursor: pointer; transition: background 0.1s;
+}
+.asm-palette-item:hover, .asm-palette-item.active { background: #21262d; }
+.asm-palette-cat {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: #7aa2f7; background: #1a1f2b; padding: 2px 6px; border-radius: 3px;
+  flex-shrink: 0; min-width: 60px; text-align: center;
+}
+.asm-palette-label { color: #c9d1d9; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asm-palette-empty { padding: 16px; text-align: center; color: #484f58; font-size: 13px; }
+
+/* ── Inline register lens ── */
+.asm-ed-reg-lens {
+  position: absolute; pointer-events: none;
+  color: #484f58; font-size: 11px; white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* ============================================
+   Security Panel
+   ============================================ */
+
+.asm-security {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.asm-sec-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 6px;
+}
+
+.asm-sec-block:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.asm-sec-block.collapsed {
+  gap: 0;
+}
+
+.asm-sec-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.asm-sec-block-header:hover {
+  opacity: 0.85;
+}
+
+.asm-sec-block-arrow {
+  font-size: 9px;
+  color: #8b949e;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.asm-sec-block-actions {
+  margin-left: auto;
+}
+
+.asm-sec-block-header .asm-btn,
+.asm-sec-block-actions .asm-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.asm-sec-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.asm-sec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.asm-sec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.asm-sec-badge.safe {
+  background: #1a2e1a;
+  color: #3fb950;
+  border: 1px solid #264f26;
+}
+
+.asm-sec-badge.unsafe {
+  background: #2e1a1a;
+  color: #ff7b72;
+  border: 1px solid #4f2626;
+}
+
+.asm-sec-table-wrap {
+  overflow-x: auto;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.asm-sec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.asm-sec-table th {
+  text-align: left;
+  padding: 3px 6px;
+  color: #8b949e;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #21262d;
+  position: sticky;
+  top: 0;
+  background: #161b22;
+}
+
+.asm-sec-table td {
+  padding: 2px 6px;
+  border-bottom: 1px solid #161b22;
+  color: #c9d1d9;
+}
+
+.asm-sec-table td.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: #8b949e;
+}
+
+.asm-sec-table td.sym {
+  color: #d2a8ff;
+  font-weight: 500;
+}
+
+.asm-sec-table td.path {
+  color: #8b949e;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asm-sec-table td.perms {
+  font-weight: 700;
+}
+
+.asm-sec-table td.perms.wx-danger {
+  color: #ff7b72;
+  background: rgba(255, 123, 114, 0.08);
+}
+
+.asm-sec-table tr.exec td {
+  background: rgba(56, 139, 253, 0.04);
+}
+
+.asm-sec-table tr:hover td {
+  background: #21262d;
+}
+
+/* Exploit Tools */
+.asm-exploit-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+  border-top: 1px solid #21262d;
+}
+
+.asm-exploit-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.asm-exploit-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.asm-input-sm {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  font-size: 11px;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.asm-input-sm:focus {
+  border-color: #388bfd;
+  outline: none;
+}
+
+.asm-exploit-output {
+  margin: 0;
+  padding: 6px 8px;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #8b949e;
+  overflow-x: auto;
+  max-height: 80px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.asm-exploit-result {
+  font-size: 11px;
+  color: #3fb950;
+  padding: 3px 6px;
+  background: #1a2e1a;
+  border-radius: 4px;
+}
+
+.asm-exploit-result.not-found {
+  color: #ff7b72;
+  background: #2e1a1a;
+}
+
+.asm-exploit-result code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  padding: 1px 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+/* Cyclic pattern highlights */
+.asm-cyclic-hl {
+  border-radius: 2px;
+  border: 1px solid;
+  padding: 0 1px;
+  font-weight: 600;
+}
+
+.asm-cyclic-hl.main {
+  outline: 2px solid;
+  outline-offset: 1px;
+}
+
+/* ============================================
+   Guided Tour (Onboarding)
+   ============================================ */
+
+.asm-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(1, 4, 9, .72);
+  transition: clip-path .3s ease;
+}
+
+.asm-tour-popover {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 18px 20px 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  animation: asm-tour-fade .25s ease;
+}
+
+@keyframes asm-tour-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.asm-tour-step-count {
+  font-size: 11px;
+  color: #484f58;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.asm-tour-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6edf3;
+  margin-bottom: 8px;
+}
+
+.asm-tour-desc {
+  font-size: 13px;
+  color: #8b949e;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.asm-tour-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.asm-tour-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background .15s;
+}
+
+.asm-tour-btn-primary {
+  background: #388bfd;
+  color: #fff;
+}
+.asm-tour-btn-primary:hover {
+  background: #58a6ff;
+}
+
+.asm-tour-btn-sec {
+  background: #21262d;
+  color: #c9d1d9;
+}
+.asm-tour-btn-sec:hover {
+  background: #30363d;
+}
+
+.asm-tour-btn-skip {
+  background: transparent;
+  color: #484f58;
+  margin-right: auto;
+}
+.asm-tour-btn-skip:hover {
+  color: #8b949e;
+}
+
+/* ============================================
+   Rich Tooltips (data-tip)
+   ============================================ */
+
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1c2128;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-line;
+  max-width: 260px;
+  width: max-content;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  font-weight: 400;
+}
+
+[data-tip]:hover::after {
+  opacity: 1;
+}
+
+/* Arrow below tooltip */
+[data-tip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #30363d;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 10001;
+}
+
+[data-tip]:hover::before {
+  opacity: 1;
+}
+
+/* Tooltip below variant */
+[data-tip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+[data-tip-pos="bottom"]::before {
+  bottom: auto;
+  top: calc(100% + 4px);
+  border-top-color: transparent;
+  border-bottom-color: #30363d;
+}

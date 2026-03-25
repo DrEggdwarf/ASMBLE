@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.git/
+.gitignore
+*.md
+docs/
+.env*
+*.log
+.DS_Store
+*.tsbuildinfo
+.venv/
+__pycache__/
+tests/
+.pytest_cache/
+.github/

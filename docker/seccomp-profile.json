@@ -1,0 +1,37 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "comment": "ASMBLE — Profil seccomp pour le code assembleur utilisateur. Whitelist minimale.",
+  "syscalls": [
+    {
+      "names": [
+        "read", "write", "open", "close", "stat", "fstat", "lstat",
+        "mmap", "mprotect", "munmap", "brk",
+        "access", "dup", "dup2",
+        "nanosleep", "clock_nanosleep",
+        "exit", "exit_group",
+        "arch_prctl", "set_tid_address", "set_robust_list",
+        "futex",
+        "getpid", "getuid", "getgid", "geteuid", "getegid",
+        "uname",
+        "execve", "wait4", "kill",
+        "pipe", "pipe2",
+        "clone", "fork", "vfork",
+        "madvise",
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn",
+        "sigaltstack",
+        "getcwd",
+        "readlink",
+        "openat", "newfstatat",
+        "ioctl",
+        "fcntl",
+        "getdents64",
+        "lseek",
+        "pread64", "pwrite64",
+        "getrandom",
+        "prlimit64",
+        "sysinfo"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    }
+  ]
+}
