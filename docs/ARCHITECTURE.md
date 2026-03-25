@@ -122,14 +122,27 @@ Bridge complet FastAPI ↔ GDB avec stepping temps réel :
 - [x] Dockerfile + docker-compose + Nginx + supervisord
 - [x] Profil seccomp pour production
 
-### Phase 3 — Features avancées 📋
+### Phase 3a — Sécurité ✅
+
+- [x] pwndbg installé dans Docker (`/opt/pwndbg`)
+- [x] Checksec via pyelftools (NX, PIE, RELRO, canary)
+- [x] vmmap via `/proc/pid/maps`
+- [x] GOT entries (`.rela.plt` + `.got.plt`)
+- [x] SecurityPanel.tsx (badges + tables)
+- [x] Auto-checksec après assemblage
+
+### Phase 3b — Outils d'exploitation ✅
+
+- [x] Cyclic patterns (De Bruijn) — génération + recherche offset
+- [x] ROP gadget search (ROPgadget)
+- [x] Sous-section Exploit Tools dans SecurityPanel
+
+### Phase 3c-3d — Futures 📋
 
 - [ ] Heap visualizer (malloc/free tracking)
-- [ ] Checksec (NX, ASLR, stack canaries)
-- [ ] Multi-architecture (ARM, RISC-V via QEMU)
+- [ ] Multi-architecture (ARM64, RISC-V via QEMU)
 - [ ] Collaborative mode
 - [ ] Exercices intégrés avec validation auto
-- [ ] Import/export de sessions
 - [ ] Themes (dark/light)
 
 ---
@@ -203,23 +216,39 @@ Pattern « textarea invisible + highlight overlay » :
 
 ```
 Dockerfile (multi-stage)
-├── Stage 1: node → npm ci + vite build
-└── Stage 2: ubuntu → python + GDB + nasm + dist/
+├── Stage 1: node:22-slim → npm ci + vite build
+└── Stage 2: ubuntu:24.04 → python + GDB + nasm + pwndbg + dist/
 
 Ports:
-  8080 → Nginx (proxy)
-  8000 → FastAPI (backend, interne)
+  8080 → Nginx (proxy, reverse proxy + static files)
+  8000 → FastAPI (backend, interne uniquement)
 ```
 
 ### Fichiers Docker
 
 | Fichier | Rôle |
 |---------|------|
-| `Dockerfile` | Build multi-stage (node → ubuntu) |
-| `docker-compose.yml` | Orchestration développement |
-| `docker/nginx.conf` | Reverse proxy (static + WS) |
-| `docker/supervisord.conf` | Gestion processus |
+| `Dockerfile` | Build multi-stage (node → ubuntu), OCI labels, HEALTHCHECK |
+| `docker-compose.yml` | Orchestration avec hardening complet |
+| `docker/nginx.conf` | Reverse proxy + security headers |
+| `docker/supervisord.conf` | Gestion processus (nginx + uvicorn) |
 | `docker/seccomp-profile.json` | Profil sécurité syscalls |
+
+### Hardening Docker
+
+| Mesure | Détail |
+|--------|--------|
+| Rootfs | `read_only: true` + tmpfs ciblés (`/tmp`, `/run`, `/var/log`, `/var/lib/nginx`) |
+| Capabilities | `cap_drop: ALL` → seuls `SYS_PTRACE`, `DAC_OVERRIDE`, `CHOWN`, `SETUID`, `SETGID` |
+| Privilege escalation | `no-new-privileges:true` |
+| Resources | 2 CPU, 512 MB RAM |
+| Nginx | `server_tokens off`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, dotfiles bloqués, `client_max_body_size 1m` |
+| Logs | stdout/stderr (12-factor, pas de fichiers log) |
+| HEALTHCHECK | `curl -sf http://localhost:8080/api/health` toutes les 30s |
+| User isolation | Code utilisateur exécuté en tant que `asmble` (non-root, nologin) |
+| Build hygiene | git purgé après clone pwndbg, `--no-install-recommends`, pip cache nettoyé, `__pycache__` supprimés |
+| Frontend | `chmod 444` (read-only) dans l'image |
+| OCI Labels | `title`, `description`, `source`, `licenses` |
 
 ---
 
@@ -229,24 +258,34 @@ Ports:
 
 | Menace | Contre-mesure |
 |--------|---------------|
-| Boucle infinie | `RLIMIT_CPU = 10s` |
-| Allocation massive | `RLIMIT_AS = 256 MB` |
-| Fork bomb | `RLIMIT_NPROC = 10` |
-| Écriture disque | `RLIMIT_FSIZE = 1 MB` |
-| Accès réseau | `--network=none` (Docker) |
+| Boucle infinie | `RLIMIT_CPU = 10s` (sandbox.py) |
+| Allocation massive | `RLIMIT_AS = 256 MB` (sandbox.py) |
+| Fork bomb | `RLIMIT_NPROC = 10` (sandbox.py) |
+| Écriture disque | `RLIMIT_FSIZE = 1 MB` (sandbox.py) |
+| Accès réseau | Docker network isolation |
 | Syscalls dangereux | Profil seccomp restrictif |
-| Escalade privilèges | User `nobody`, pas de capabilities |
+| Escalade privilèges | User `asmble` (non-root), `no-new-privileges`, `cap_drop: ALL` |
+| DoS WebSocket | Rate limiting token bucket (30 burst, 20/s refill) |
+| Session flood | Max 10 sessions simultanées, auto-cleanup |
 
 ### Isolation Docker (production)
 
 ```bash
+# Via docker-compose (recommandé) :
+docker compose up --build
+
+# Ou manuellement :
 docker run \
-  --security-opt seccomp=docker/seccomp-profile.json \
-  --network=none \
   --read-only \
-  --tmpfs /tmp:size=64m \
-  --memory=512m \
-  --cpus=1 \
+  --tmpfs /tmp:size=128m,exec \
+  --tmpfs /run:size=8m \
+  --tmpfs /var/log:size=32m \
+  --tmpfs /var/lib/nginx:size=8m \
+  --security-opt no-new-privileges:true \
+  --cap-drop ALL \
+  --cap-add SYS_PTRACE --cap-add DAC_OVERRIDE \
+  --cap-add CHOWN --cap-add SETUID --cap-add SETGID \
+  --memory=512m --cpus=2 \
   -p 8080:8080 asmble
 ```
 

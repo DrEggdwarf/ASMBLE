@@ -211,13 +211,16 @@ Visualisation en blocs :
 
 | # | Description | Effort |
 |---|-------------|--------|
-| I1 | Tests unitaires backend (pytest) | Moyen |
+| I1 | ~~Tests unitaires backend (pytest) — 39 tests~~ ✅ | ~~Moyen~~ |
 | I2 | Tests e2e frontend (Playwright) | Moyen |
-| I3 | CI/CD GitHub Actions (build + test + push image) | Moyen |
-| I4 | Publier l'image sur Docker Hub / GHCR | Faible |
-| I5 | Réduire la taille de l'image Docker (actuellement ~500MB, cible ~350MB) | Moyen |
-| I6 | Rate limiting sur les WebSocket connections | Faible |
-| I7 | Monitoring / health checks plus détaillés | Faible |
+| I3 | ~~CI/CD GitHub Actions (build + test + push image)~~ ✅ | ~~Moyen~~ |
+| I4 | ~~Publier l'image sur GHCR (workflow publish.yml, tag v*)~~ ✅ | ~~Faible~~ |
+| I5 | ~~Réduire la taille de l'image Docker (1.71→1.51 GB)~~ ✅ | ~~Moyen~~ |
+| I6 | ~~Rate limiting sur les WebSocket connections (token bucket 30/20)~~ ✅ | ~~Faible~~ |
+| I7 | ~~Monitoring / health checks détaillés (/api/health/detailed)~~ ✅ | ~~Faible~~ |
+| I8 | ~~Docker hardening complet~~ ✅ | ~~Moyen~~ |
+| I9 | ~~Nginx security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)~~ ✅ | ~~Faible~~ |
+| I10 | ~~Read-only rootfs + cap_drop ALL + no-new-privileges~~ ✅ | ~~Faible~~ |
 
 ---
 
@@ -330,6 +333,9 @@ Visualisation en blocs :
 28. ~~**I5**~~ ✅ — Image Docker réduite
 29. ~~**I6**~~ ✅ — Rate limiting WebSocket
 30. ~~**I7**~~ ✅ — Health checks détaillés
+31. ~~**I8**~~ ✅ — Docker hardening (read-only rootfs, cap_drop ALL, no-new-privileges)
+32. ~~**I9**~~ ✅ — Nginx security headers
+33. ~~**I10**~~ ✅ — OCI labels, HEALTHCHECK, frontend read-only
 
 ---
 
@@ -405,7 +411,7 @@ Visualisation en blocs :
 
 | # | Item | Description | Dépend de |
 |---|------|-------------|------------|
-| 7.1 | ~~**Q25**~~ ✅ | Tour guidé — overlay spotlight 7 étapes (FR), rejouable via Ctrl+K | UI stable |
+| 7.1 | ~~**Q25**~~ ✅ | Tour guidé — overlay spotlight 11 étapes (FR), rejouable via Ctrl+K | UI stable |
 | 7.2 | ~~**Q26**~~ ✅ | Tooltips riches (data-tip CSS) sur tous les boutons avec raccourcis | — |
 | 7.3 | ~~**I1-I3**~~ ✅ | 39 tests pytest (models, annotations, exploit_tools, sandbox, API) + CI GitHub Actions | UI stable |
 | 7.4 | ~~**I4**~~ ✅ | Workflow publish.yml — push GHCR sur tag v* | I3 (CI) |
@@ -413,7 +419,16 @@ Visualisation en blocs :
 | 7.6 | ~~**I6**~~ ✅ | Rate limiting WS token bucket (30 burst, 20/s refill) | — |
 | 7.7 | ~~**I7**~~ ✅ | /api/health/detailed (tools check: nasm, gdb, yasm, gcc, pygdbmi) | — |
 
-### Sprint 8 — Polish & Nice to have ✨
+### Sprint 8 — Docker Hardening 🔒 ✅
+> Sécurisation complète du conteneur Docker pour review DevSecOps.
+
+| # | Item | Description | Effort |
+|---|------|-------------|--------|
+| 8.1 | ~~**I8**~~ ✅ | Dockerfile : OCI labels, HEALTHCHECK, git purgé après pwndbg, frontend chmod 444, user asmble | Moyen |
+| 8.2 | ~~**I9**~~ ✅ | nginx.conf : `server_tokens off`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, dotfiles bloqués, `client_max_body_size 1m`, logs stdout/stderr | Faible |
+| 8.3 | ~~**I10**~~ ✅ | docker-compose.yml : `read_only: true`, `cap_drop: ALL`, `cap_add` minimal (5 caps), `no-new-privileges`, tmpfs ciblés, limites CPU/RAM | Faible |
+
+### Sprint 9 — Polish & Nice to have ✨
 > Dernières couches de polish.
 
 | # | Item | Description | Effort |
@@ -430,8 +445,7 @@ Visualisation en blocs :
 
 | # | Item | Description |
 |---|------|-------------|
-| 8.1 | **P7-P10** | Phase 3b : outils d'exploitation (cyclic, ROP) |
-| 8.2 | **P11-P16** | Phase 3c : heap visualizer |
-| 8.3 | **P17-P21** | Phase 3d : multi-architecture (ARM64, RISC-V) |
-| 8.4 | **Q17** | Drag & drop layout |
-| 8.5 | **U6-U7** | Mode collaboratif + exercices intégrés |
+| 9.1 | **P11-P16** | Phase 3c : heap visualizer |
+| 9.2 | **P17-P21** | Phase 3d : multi-architecture (ARM64, RISC-V) |
+| 9.3 | **Q17** | Drag & drop layout |
+| 9.4 | **U6-U7** | Mode collaboratif + exercices intégrés |
