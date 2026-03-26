@@ -14,7 +14,7 @@ Ouvrir **http://localhost:8080**
 
 ## Aperçu
 
-Interface en 3 colonnes redimensionnables — éditeur, registres + flags, panneaux (stack, mémoire, sécurité, console GDB) — avec un terminal intégré.
+Interface en 3 colonnes redimensionnables — éditeur, registres + flags + terminal docké, panneaux (stack, mémoire, sécurité, console GDB) — avec hints pédagogiques au-dessus de l'éditeur.
 
 Un seul `docker compose up` donne un environnement complet : éditeur avec syntax highlighting, assemblage réel (NASM/GAS/YASM), debugging pas-à-pas via GDB, analyse de sécurité (checksec, vmmap, GOT, ROP gadgets).
 
@@ -41,7 +41,7 @@ Un seul `docker compose up` donne un environnement complet : éditeur avec synta
 - Build & Run (exécution directe)
 - Auto-step avec vitesse configurable (100ms–2s)
 - Breakpoints conditionnels + watchpoints
-- Annotation pédagogique FR contextuelle à chaque step
+- Annotation pédagogique FR contextuelle à chaque step, affichée au-dessus de l'éditeur
 - Console GDB (commandes brutes)
 - Évaluateur d'expressions
 
@@ -67,10 +67,12 @@ Un seul `docker compose up` donne un environnement complet : éditeur avec synta
 
 ### Sécurité & Exploit
 - **Checksec** : badges NX, PIE, RELRO, Canary (auto après assemblage)
+- **Security panel en cards** : grille de tools visuels ouvrant chacun une modal dédiée
 - **vmmap** : carte mémoire du processus (/proc/pid/maps)
 - **GOT** : table des symboles résolus (.rela.plt + .got.plt)
 - **Cyclic patterns** : génération De Bruijn + recherche d'offset
 - **ROP gadgets** : recherche avec filtres
+- **Cards WiP** déjà visibles pour les prochains outils : Telescope, Search, Heap, Hexdump, Canary, Strings
 - pwndbg intégré dans le container Docker
 
 ### Référence intégrée
@@ -84,7 +86,8 @@ Un seul `docker compose up` donne un environnement complet : éditeur avec synta
 - Raccourcis clavier : F5 Run, F10 Step Over, F11 Step Into, F9 Breakpoint
 - Panneau droit collapsible
 - Console GDB en drawer latéral
-- Terminal avec stdout/stderr du programme
+- Terminal docké sous les registres, redimensionnable, avec split stdout/stderr + stdin
+- Terminal agrandissable en modal puis re-dockable
 - Snippets templates (Hello World, Boucle, Fonction, Stack Frame, Conditions, Tableau)
 
 ## Architecture
@@ -93,6 +96,7 @@ Un seul `docker compose up` donne un environnement complet : éditeur avec synta
 ┌─ Browser ──────────────────────────────────────────┐
 │  React 19 + TypeScript 5.6 + Vite 6               │
 │  Éditeur │ Registres+Flags │ Stack/Mémoire/Sécu   │
+│  + hint  │ + Terminal      │ + cards Security     │
 │                    │ WebSocket                     │
 │  ┌─────────────────▼──────────────────────────┐    │
 │  │  Nginx :8080 → FastAPI :8000               │    │

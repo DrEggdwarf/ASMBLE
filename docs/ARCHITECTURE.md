@@ -30,10 +30,8 @@ ASMBLE est un débogeur pédagogique x86-64 interactif. Collez un snippet assemb
  │  Browser — ASMBLE                                        │
  │  ┌──────────┬────────────────────┬─────────────────────┐  │
  │  │ Éditeur  │ Registres + Flags  │ Stack / Mémoire     │  │
- │  │ x86-64   │ (RegCard)          │ Référence / Eval    │  │
+ │  │ + hint   │ + Terminal docké   │ Security / Eval     │  │
  │  │          │                    │ Console GDB         │  │
- │  ├──────────┴────────────────────┴─────────────────────┤  │
- │  │ Terminal (sortie programme / erreurs)                │  │
  │  └─────────────────────────────────────────────────────┘  │
  │                     │ WebSocket                           │
  │  ┌──────────────────▼──────────────────────────────────┐  │
@@ -98,7 +96,7 @@ Frontend complet avec données simulées :
 - [x] Lexique : ~45 instructions + ~15 syscalls avec recherche plein texte
 - [x] Convention d'appel SysV AMD64 + 9 modes d'adressage
 - [x] Toggle live/mock via `VITE_LIVE_MODE`
-- [x] Layout 3 colonnes + terminal redimensionnables
+- [x] Layout 3 colonnes + terminal redimensionnable docké dans la colonne centrale
 
 ### Phase 2 — Backend GDB/MI réel ✅
 
@@ -128,14 +126,14 @@ Bridge complet FastAPI ↔ GDB avec stepping temps réel :
 - [x] Checksec via pyelftools (NX, PIE, RELRO, canary)
 - [x] vmmap via `/proc/pid/maps`
 - [x] GOT entries (`.rela.plt` + `.got.plt`)
-- [x] SecurityPanel.tsx (badges + tables)
+- [x] SecurityPanel.tsx (checksec inline + cards tools + modals)
 - [x] Auto-checksec après assemblage
 
 ### Phase 3b — Outils d'exploitation ✅
 
 - [x] Cyclic patterns (De Bruijn) — génération + recherche offset
 - [x] ROP gadget search (ROPgadget)
-- [x] Sous-section Exploit Tools dans SecurityPanel
+- [x] Cards actives (VMmap, GOT, Cyclic, ROP) + cards WiP pour la roadmap outillage
 - [x] **pwndbg natif** — cyclic/rop/telescope/search via GDB bridge (`pwndbg_tools.py`)
 - [x] Fallback custom (`exploit_tools.py`) si pwndbg non disponible
 - [x] `gdb_command_logged()` — capture fiable de la sortie async pwndbg (flush + drain + ANSI strip)
@@ -149,8 +147,8 @@ Bridge complet FastAPI ↔ GDB avec stepping temps réel :
 - [ ] Exercices intégrés avec validation auto
 - [x] Themes (dark/light) — Sprint 12 : variables CSS, thème clair GitHub-style, prefers-color-scheme
 - [x] Responsive / compact mode — Sprint 12 : @media breakpoints 1200px/768px
-- [x] Terminal interactif (stdin) — Sprint 12 : PTY pair, WS `send_stdin`
-- [x] Terminal flottant — Sprint 12 : dock/float toggle
+- [x] Terminal interactif (stdin) — PTY pair, WS `send_stdin`, split docké stdout/stderr + stdin redimensionnable
+- [x] Terminal flottant / modal — dock/float toggle conservé avec vue agrandie unique
 - [x] FAB (Floating Action Button) — Sprint 12 : menu radial actions rapides
 
 ---

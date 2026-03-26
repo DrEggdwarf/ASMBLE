@@ -429,7 +429,7 @@
   border-right: none;
   background: var(--asm-bg-panel);
   flex-shrink: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .asm-col-tabs {
@@ -722,6 +722,7 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .asm-regs-header {
@@ -782,6 +783,7 @@
   background: var(--asm-bg-rip);
   border-bottom: 1px solid var(--asm-border);
   font-size: 12px;
+  min-width: 0;
 }
 
 .asm-rip-bar.changed { background: var(--asm-bg-rip-changed); }
@@ -795,12 +797,17 @@
 .asm-rip-val {
   color: var(--asm-blue-light);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .asm-rip-instr {
   color: var(--asm-text-subtle);
   margin-left: auto;
   font-size: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Main register cards — vertical list */
@@ -832,6 +839,7 @@
   align-items: center;
   gap: 8px;
   padding: 3px 6px;
+  min-width: 0;
 }
 
 .asm-regcard-pill {
@@ -854,6 +862,10 @@
   font-size: 12px;
   color: var(--asm-text-value);
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .asm-regcard.changed .asm-regcard-val { color: var(--asm-green-light); }
@@ -865,6 +877,7 @@
   gap: 4px;
   margin-left: auto;
   font-size: 11px;
+  flex-shrink: 0;
 }
 
 .asm-delta-old { color: var(--asm-red); font-size: 10px; }
@@ -2246,15 +2259,44 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(600px, 90vw);
-  max-height: 360px;
+  max-height: 82vh;
   background: var(--asm-bg-panel);
   border: 1px solid var(--asm-border-strong);
   border-radius: 10px;
-  z-index: 200;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+}
+
+.asm-terminal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(1, 4, 9, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.asm-terminal-modal-overlay .asm-terminal-float {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: min(900px, 94vw);
+}
+.asm-annotation-editor {
+  margin: 0 0 6px 0;
+}
+.asm-regs-pane-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .asm-terminal-float-header {
@@ -2277,7 +2319,76 @@
   padding: 8px 14px;
   font-size: 12px;
   line-height: 1.7;
-  max-height: 300px;
+  max-height: none;
+}
+.asm-terminal-docked {
+  border-top: 1px solid var(--asm-border);
+}
+.asm-terminal-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+.asm-terminal-output-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.asm-terminal-output-head {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--asm-text-ghost);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--asm-border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+.asm-terminal-output-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.asm-terminal-input-pane {
+  min-height: 80px;
+  border-top: 1px solid var(--asm-border-subtle);
+  background: var(--asm-bg-panel);
+}
+.asm-terminal-stdin-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.asm-terminal-stdin-head {
+  font-size: 10px;
+  color: var(--asm-text-ghost);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+.asm-terminal-stdin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--asm-border-subtle);
+  border-radius: 6px;
+  background: var(--asm-bg-root);
+}
+.asm-terminal-split-handle {
+  height: 6px;
+  cursor: row-resize;
+  background: rgba(255, 255, 255, 0.04);
+}
+.asm-terminal-split-handle:hover,
+.asm-terminal-split-handle:active {
+  background: linear-gradient(90deg, transparent, var(--asm-blue), transparent);
 }
 
 /* Terminal scrollbar */
@@ -3455,10 +3566,228 @@
 .asm-security {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   padding: 4px 0;
 }
 
+/* ── Checksec inline banner ── */
+.asm-checksec-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--asm-bg-card);
+  border: 1px solid var(--asm-border-subtle);
+  border-radius: 6px;
+}
+
+.asm-checksec-inline-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--asm-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.asm-checksec-inline-header i {
+  color: var(--asm-blue-strong);
+  font-size: 12px;
+}
+
+.asm-btn-xs {
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+}
+
+/* ── Tool cards grid ── */
+.asm-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.asm-tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 4px 8px;
+  background: var(--asm-bg-card);
+  border: 1px solid var(--asm-border-subtle);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  text-align: center;
+  position: relative;
+  outline: none;
+  min-height: 84px;
+}
+
+.asm-tool-card:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+
+.asm-tool-card:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+.asm-tool-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--asm-blue-strong);
+}
+
+.asm-tool-card.wip {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.asm-tool-card.has-data {
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+/* Icon wrapper — colored rounded square (iOS-like) */
+.asm-tool-card-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--card-color, var(--asm-blue-strong));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+.asm-tool-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--asm-text-primary);
+  letter-spacing: 0.1px;
+  line-height: 1.1;
+}
+
+.asm-tool-card-sub {
+  display: none;
+}
+
+.asm-tool-card-badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--asm-green);
+  border: 1px solid rgba(63, 185, 80, 0.35);
+  letter-spacing: 0.1px;
+  margin-top: 1px;
+}
+
+.asm-tool-card-wip {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 158, 100, 0.12);
+  color: var(--asm-orange);
+  border: 1px solid rgba(255, 158, 100, 0.28);
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* ── Tool modal overlay ── */
+.asm-tool-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(1, 4, 9, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+}
+
+.asm-tool-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  background: var(--asm-bg-panel);
+  border: 1px solid var(--asm-border-muted);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.asm-tool-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--asm-border-subtle);
+  background: var(--asm-bg-card);
+  flex-shrink: 0;
+}
+
+.asm-tool-modal-icon {
+  color: var(--asm-blue-strong);
+  font-size: 14px;
+}
+
+.asm-tool-modal-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--asm-text-primary);
+  flex: 1;
+}
+
+.asm-tool-modal-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.asm-tool-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--asm-text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.asm-tool-modal-close:hover {
+  background: var(--asm-bg-hover);
+  color: var(--asm-text-primary);
+}
+
+.asm-tool-modal-body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.asm-tool-modal-body .asm-sec-table-wrap {
+  max-height: none;
+}
+
+/* ── Security: keep old block/table/badge styles ── */
 .asm-sec-block {
   display: flex;
   flex-direction: column;

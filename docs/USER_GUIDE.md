@@ -12,7 +12,7 @@
 4. [Panneau registres](#panneau-registres)
 5. [Panneau flags](#panneau-flags)
 6. [Panneau stack](#panneau-stack)
-7. [Onglets (panneau droit)](#onglets-panneau-droit)
+7. [Panneau droit](#panneau-droit)
 8. [Terminal](#terminal)
 9. [Mode Live vs Mock](#mode-live-vs-mock)
 10. [Raccourcis clavier](#raccourcis-clavier)
@@ -21,22 +21,21 @@
 
 ## Vue d'ensemble
 
-L'interface est divisée en 3 colonnes redimensionnables + un terminal en bas :
+L'interface est divisée en 3 colonnes redimensionnables. Le terminal est désormais docké dans la colonne centrale, sous les registres :
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  ▶ ASMBLE | [NASM x86-64 ▾] | [args...] | Contrôles | ● Live   │
 ├──────────────┬──────────────────┬────────────────────────────────┤
 │              │                  │                                │
-│   Éditeur    │   Registres      │  Stack / Mémoire / Eval       │
-│   x86-64     │   + Flags        │  Console / Référence          │
+│   Éditeur    │   Registres      │  Stack / Mémoire / Security   │
+│   + hint     │   + Flags        │  Console / Eval               │
+│              │   + Terminal     │                               │
 │              │                  │                                │
-├──────────────┴──────────────────┴────────────────────────────────┤
-│  Terminal (sortie programme / erreurs)                           │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-Les séparateurs entre colonnes sont glissables. Le terminal est aussi redimensionnable verticalement.
+Les séparateurs entre colonnes sont glissables. Le terminal docké est redimensionnable verticalement dans la colonne centrale, et son split `stdout/stderr` / `stdin` possède sa propre poignée de resize.
 
 ---
 
@@ -62,6 +61,7 @@ sections (turquoise), nombres, chaînes, commentaires (gris), etc.
 | **Tooltip** | Survol d'une instruction pour voir sa description |
 | **Indicateur RIP** | Flèche `→` dans la gouttière indiquant l'instruction courante |
 | **Ligne active** | Surlignage de la ligne en cours d'exécution |
+| **Hint pédagogique** | Bandeau au-dessus de l'éditeur expliquant l'instruction courante |
 
 ### Sélecteur d'assembleur
 
@@ -192,7 +192,14 @@ En mode live, le panneau stack inclut un champ pour ajouter des watchpoints :
 
 ---
 
-## Onglets (panneau droit)
+## Panneau droit
+
+Le panneau droit est un empilement de sections repliables :
+- **Stack**
+- **Memory**
+- **Security**
+
+Par défaut, **Stack** et **Memory** sont repliés pour laisser visible immédiatement la section Security.
 
 ### Stack
 
@@ -202,6 +209,26 @@ Contenu de la pile + backtrace (frames d'appel en live) + watchpoints.
 
 - **Section .text** : désassemblage complet du programme (adresse, bytes, instruction)
 - **Sections ELF** : cliquer sur `.data`, `.bss`, etc. pour charger leur contenu (live)
+
+### Security
+
+La section Security commence par un bandeau **Checksec** toujours visible, puis une grille de cards.
+
+Cards actives aujourd'hui :
+- **VMmap**
+- **GOT**
+- **Cyclic**
+- **ROP**
+
+Chaque card ouvre une **modal dédiée** avec plus d'espace pour les tables et les actions.
+
+Des cards **WiP** sont aussi visibles pour matérialiser la roadmap outillage :
+- **Telescope**
+- **Search**
+- **Heap**
+- **Hexdump**
+- **Canary**
+- **Strings**
 
 ### Eval
 
@@ -254,15 +281,23 @@ Convention d'appel SysV AMD64 :
 
 ## Terminal
 
-Le terminal en bas de l'écran affiche :
+Le terminal docké sous les registres affiche :
 - **Connexion** : état de la connexion au backend
 - **Sortie programme** : stdout/stderr du code assembleur exécuté
 - **Erreurs** : erreurs d'assemblage ou d'exécution (en rouge)
 - **Fin de programme** : message de sortie avec code de retour
 
+En mode live, quand le programme attend une entrée, le terminal se divise en deux zones :
+- **stdout / stderr** en haut
+- **stdin** en bas
+
+Le ratio est redimensionnable avec une poignée horizontale.
+
 Contrôles :
 - **clear** : vide le terminal
-- **✕** : ferme le terminal (un bouton **Terminal** apparaît pour le rouvrir)
+- **agrandir** : ouvre le terminal en modal large
+- **réduire** : re-docke le terminal dans la colonne centrale
+- **▲ / ▼** : replie ou déplie le terminal docké
 
 ---
 

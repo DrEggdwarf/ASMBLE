@@ -144,6 +144,7 @@ export default function AsmDebugger() {
   const [gdbCmdInput, setGdbCmdInput] = useState('')
   const [stdinInput, setStdinInput] = useState('')
   const [termFloating, setTermFloating] = useState(false)
+  const [stdinSplitPct, setStdinSplitPct] = useState(50)
   const [fabOpen, setFabOpen] = useState(false)
   const [gdbConsoleHistory, setGdbConsoleHistory] = useState<{ cmd: string; output: string }[]>([])
   const [programArgs, setProgramArgs] = useState('')
@@ -156,8 +157,8 @@ export default function AsmDebugger() {
   const [emptyDismissed, setEmptyDismissed] = useState(false)
   const [snippetsOpen, setSnippetsOpen] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
-  const [stackCollapsed, setStackCollapsed] = useState(false)
-  const [memoryCollapsed, setMemoryCollapsed] = useState(false)
+  const [stackCollapsed, setStackCollapsed] = useState(true)
+  const [memoryCollapsed, setMemoryCollapsed] = useState(true)
   const [securityCollapsed, setSecurityCollapsed] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [evalOpen, setEvalOpen] = useState(false)
@@ -288,6 +289,38 @@ export default function AsmDebugger() {
 
   const { cols, bodyRef, onDown: onColDown } = useColResize([30, 36, 34])
   const { h: termH, rootRef, onDown: onTermDown } = useTermResize(200)
+  const stdinDragRef = useRef<{ dragging: boolean; host: HTMLElement | null }>({ dragging: false, host: null })
+
+  const onStdinSplitDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    stdinDragRef.current.dragging = true
+    stdinDragRef.current.host = (e.currentTarget.parentElement as HTMLElement) || null
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!stdinDragRef.current.dragging || !stdinDragRef.current.host) return
+      const rect = stdinDragRef.current.host.getBoundingClientRect()
+      if (rect.height <= 0) return
+      const pct = ((e.clientY - rect.top) / rect.height) * 100
+      setStdinSplitPct(Math.max(25, Math.min(75, pct)))
+    }
+    const onUp = () => {
+      if (!stdinDragRef.current.dragging) return
+      stdinDragRef.current.dragging = false
+      stdinDragRef.current.host = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [])
 
   // ── Live mode: feed GDB snapshots into step history ──
   const liveHistory = gdb.history
@@ -352,6 +385,7 @@ export default function AsmDebugger() {
   const canBack = IS_LIVE ? currentStep > 0 && !gdb.stepping : step > 0
   const atLatest = IS_LIVE ? currentStep >= liveHistory.length - 1 : false
   const canForward = IS_LIVE ? (gdb.state === 'connected' && !gdb.stepping) : step < traceSteps.length - 1
+  const canStdin = IS_LIVE && gdb.state === 'connected' && !gdb.programExited
   const totalLines = code.split('\n').length
   const activeLine = (IS_LIVE && cur.changed.length === 0) ? 0 : Math.max(1, Math.min(cur.ip, totalLines))
   const initRegs = (steps[0] ?? EMPTY_SNAP).regs
@@ -460,6 +494,80 @@ export default function AsmDebugger() {
     if (id) gdb.removeWatchpoint(id)
     setWatchpoints(prev => prev.filter((_, j) => j !== idx))
   }, [gdb])
+
+  const renderTerminalLines = () => termOutput.map((line, i) => {
+    const cls = line.startsWith('$')
+      ? 'cmd'
+      : line.toLowerCase().includes('error')
+        ? 'err'
+        : line.startsWith('►')
+          ? 'step'
+          : line.startsWith('  ↳')
+            ? 'output'
+            : 'out'
+    return <div key={i} className={`asm-terminal-line ${cls}`}>{line}</div>
+  })
+
+  const renderTerminalInput = () => (
+    <form
+      className="asm-terminal-stdin-pane"
+      onSubmit={e => {
+        e.preventDefault()
+        if (!stdinInput) return
+        gdb.sendStdin(stdinInput + '\n')
+        setTermOutput(prev => [...prev, `< ${stdinInput}`])
+        setStdinInput('')
+      }}
+    >
+      <div className="asm-terminal-stdin-head">stdin</div>
+      <div className="asm-terminal-stdin-row">
+        <span className="asm-terminal-stdin-prompt">&gt;</span>
+        <input
+          className="asm-terminal-stdin-input"
+          value={stdinInput}
+          onChange={e => setStdinInput(e.target.value)}
+          placeholder="stdin (entrée programme)..."
+          autoComplete="off"
+        />
+      </div>
+    </form>
+  )
+
+  const renderTerminalPanel = (floating: boolean) => (
+    <>
+      <div className={floating ? 'asm-terminal-float-header' : 'asm-terminal-drawer-bar'} onClick={floating ? undefined : () => setTermVisible(v => !v)}>
+        <span className="asm-terminal-title">Terminal</span>
+        <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} ligne${termOutput.length > 1 ? 's' : ''}` : ''}</span>
+        <div className="asm-terminal-actions" onClick={e => e.stopPropagation()}>
+          <button className="asm-terminal-action" onClick={() => setTermOutput([])} data-tip="Vider le terminal">clear</button>
+          {!floating && <button className="asm-terminal-action" onClick={() => { setTermFloating(true); setTermVisible(true) }} data-tip="Agrandir en modal"><i className="fa-solid fa-expand" /></button>}
+          {floating && <button className="asm-terminal-action" onClick={() => setTermFloating(false)} data-tip="Réduire vers le panneau"><i className="fa-solid fa-compress" /></button>}
+          <button className="asm-terminal-action" onClick={() => setTermVisible(v => !v)} data-tip={termVisible ? 'Réduire le terminal' : 'Agrandir le terminal'}>{termVisible ? '\u25BC' : '\u25B2'}</button>
+        </div>
+      </div>
+      {termVisible && (
+        canStdin ? (
+          <div className="asm-terminal-split">
+            <div className="asm-terminal-output-pane" style={{ height: `${stdinSplitPct}%` }}>
+              <div className="asm-terminal-output-head">stdout / stderr</div>
+              <div className="asm-terminal-output-scroll" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
+                {renderTerminalLines()}
+              </div>
+            </div>
+            <div className="asm-terminal-split-handle" onMouseDown={onStdinSplitDown} />
+            <div className="asm-terminal-input-pane" style={{ height: `${100 - stdinSplitPct}%` }}>
+              {renderTerminalInput()}
+            </div>
+          </div>
+        ) : (
+          <div className="asm-terminal-body" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
+            {renderTerminalLines()}
+            <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
+          </div>
+        )
+      )}
+    </>
+  )
 
   return (
     <div className="asm-root" ref={rootRef} data-theme={theme}>
@@ -603,6 +711,10 @@ Recharge le binaire dans GDB"><i className="fa-solid fa-rotate-left" /> Reset</b
               </div>
             </div>
           </div>
+          <div className={`asm-annotation asm-annotation-editor ${cur.jumped ? 'jumped' : ''}`}>
+            {cur.jumped && <span className="asm-jump-badge small"><i className="fa-solid fa-bolt" /> JUMP</span>}
+            <span>{cur.annotation}</span>
+          </div>
           {code.length === 0 && !emptyDismissed && (
             <div className="asm-empty-state">
               <div className="asm-empty-icon"><i className="fa-solid fa-microchip" /></div>
@@ -623,75 +735,80 @@ Recharge le binaire dans GDB"><i className="fa-solid fa-rotate-left" /> Reset</b
 
         {/* COL 2: Registers + Flags */}
         <div className="asm-col asm-col-regs" style={{ width: rightCollapsed ? `calc(${cols[1] + cols[2]}% - 28px)` : cols[1] + '%' }}>
-          <div className={`asm-annotation ${cur.jumped ? 'jumped' : ''}`}>
-            {cur.jumped && <span className="asm-jump-badge"><i className="fa-solid fa-bolt" /> JUMP</span>}
-            <span>{cur.annotation}</span>
-          </div>
-          <div className="asm-regs-section">
-            <div className="asm-regs-header">
-              <span className="asm-section-title">Registres</span>
-              <div className="asm-regs-filters">
-                <button className={`asm-regs-toggle ${hideUnchanged ? 'on' : ''}`} onClick={() => setHideUnchanged(v => !v)} data-tip="Afficher uniquement les registres modifiés">modifiés</button>
-                <button className={`asm-regs-toggle ${showUpper ? 'on' : ''}`} onClick={() => setShowUpper(v => !v)} data-tip="Afficher les bits 63:32 des registres">63:32</button>
-                <button className="asm-regs-toggle on" onClick={() => setDisplayMode(m => m === 'hex' ? 'dec' : m === 'dec' ? 'bin' : 'hex')} data-tip="Basculer hex / décimal / binaire">{displayMode === 'hex' ? '0x' : displayMode === 'dec' ? 'dec' : 'bin'}</button>
-              </div>
-            </div>
-            <div className={`asm-rip-bar ${cur.changed.includes('rip') ? 'changed' : ''}`}>
-              <span className="asm-rip-label">RIP</span>
-              <span className="asm-rip-val" title={`hex: 0x${BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(16)}\ndec: ${cur.regs.rip}\nbin: 0b${BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(2)}`}>0x{BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(16)}</span>
-              <span className="asm-rip-instr">{cur.instr}</span>
-            </div>
-            <div className="asm-regcards-list">
-              {mainRegs.map(r => (
-                <div key={r} onDoubleClick={() => { if (IS_LIVE) { setEditingReg(r); setEditRegValue('0x' + BigInt.asUintN(64, BigInt(cur.regs[r])).toString(16)) } }}>
-                  {editingReg === r ? (
-                    <div className="asm-reg-edit">
-                      <span className="asm-reg-edit-name">{r}</span>
-                      <input
-                        className="asm-reg-edit-input"
-                        value={editRegValue}
-                        onChange={e => setEditRegValue(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            const val = parseInt(editRegValue, editRegValue.startsWith('0x') ? 16 : 10)
-                            if (!isNaN(val)) gdb.setRegister(r, val)
-                            setEditingReg(null)
-                          } else if (e.key === 'Escape') {
-                            setEditingReg(null)
-                          }
-                        }}
-                        onBlur={() => setEditingReg(null)}
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <RegCard name={r} val={cur.regs[r]} prevVal={prev ? prev.regs[r] : null} changed={cur.changed.includes(r)} showUpper={showUpper} displayMode={displayMode} history={regHistory[r]} />
-                  )}
+          <div className="asm-regs-pane-scroll">
+            <div className="asm-regs-section">
+              <div className="asm-regs-header">
+                <span className="asm-section-title">Registres</span>
+                <div className="asm-regs-filters">
+                  <button className={`asm-regs-toggle ${hideUnchanged ? 'on' : ''}`} onClick={() => setHideUnchanged(v => !v)} data-tip="Afficher uniquement les registres modifiés">modifiés</button>
+                  <button className={`asm-regs-toggle ${showUpper ? 'on' : ''}`} onClick={() => setShowUpper(v => !v)} data-tip="Afficher les bits 63:32 des registres">63:32</button>
+                  <button className="asm-regs-toggle on" onClick={() => setDisplayMode(m => m === 'hex' ? 'dec' : m === 'dec' ? 'bin' : 'hex')} data-tip="Basculer hex / décimal / binaire">{displayMode === 'hex' ? '0x' : displayMode === 'dec' ? 'dec' : 'bin'}</button>
                 </div>
-              ))}
+              </div>
+              <div className={`asm-rip-bar ${cur.changed.includes('rip') ? 'changed' : ''}`}>
+                <span className="asm-rip-label">RIP</span>
+                <span className="asm-rip-val" title={`hex: 0x${BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(16)}\ndec: ${cur.regs.rip}\nbin: 0b${BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(2)}`}>0x{BigInt.asUintN(64, BigInt(cur.regs.rip)).toString(16)}</span>
+                <span className="asm-rip-instr">{cur.instr}</span>
+              </div>
+              <div className="asm-regcards-list">
+                {mainRegs.map(r => (
+                  <div key={r} onDoubleClick={() => { if (IS_LIVE) { setEditingReg(r); setEditRegValue('0x' + BigInt.asUintN(64, BigInt(cur.regs[r])).toString(16)) } }}>
+                    {editingReg === r ? (
+                      <div className="asm-reg-edit">
+                        <span className="asm-reg-edit-name">{r}</span>
+                        <input
+                          className="asm-reg-edit-input"
+                          value={editRegValue}
+                          onChange={e => setEditRegValue(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              const val = parseInt(editRegValue, editRegValue.startsWith('0x') ? 16 : 10)
+                              if (!isNaN(val)) gdb.setRegister(r, val)
+                              setEditingReg(null)
+                            } else if (e.key === 'Escape') {
+                              setEditingReg(null)
+                            }
+                          }}
+                          onBlur={() => setEditingReg(null)}
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <RegCard name={r} val={cur.regs[r]} prevVal={prev ? prev.regs[r] : null} changed={cur.changed.includes(r)} showUpper={showUpper} displayMode={displayMode} history={regHistory[r]} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="asm-regext-grid">
+                {extRegs.map(r => (
+                  <RegExtRow key={r} name={r} val={cur.regs[r]} prevVal={prev ? prev.regs[r] : null} changed={cur.changed.includes(r)} displayMode={displayMode} history={regHistory[r]} />
+                ))}
+              </div>
+              {hideUnchanged && mainRegs.length === 0 && extRegs.length === 0 && (
+                <div className="asm-empty">Aucun registre modifié à ce step.</div>
+              )}
             </div>
-            <div className="asm-regext-grid">
-              {extRegs.map(r => (
-                <RegExtRow key={r} name={r} val={cur.regs[r]} prevVal={prev ? prev.regs[r] : null} changed={cur.changed.includes(r)} displayMode={displayMode} history={regHistory[r]} />
-              ))}
+            <div className="asm-flags-inline">
+              {Object.entries(cur.flags).map(([flag, val]) => {
+                const isActive = val === 1 || val === true
+                const wasActive = prev ? (prev.flags[flag] === 1 || prev.flags[flag] === true) : false
+                const justChanged = prev !== null && isActive !== wasActive
+                return (
+                  <span key={flag} className={`asm-flag-pill ${isActive ? 'active' : ''} ${justChanged ? 'pulse' : ''}`} title={FLAG_DESCS[flag] || ''}>
+                    {flag}
+                  </span>
+                )
+              })}
+              {cur.flagHint && <span className="asm-flag-hint-inline">{cur.flagHint}</span>}
             </div>
-            {hideUnchanged && mainRegs.length === 0 && extRegs.length === 0 && (
-              <div className="asm-empty">Aucun registre modifié à ce step.</div>
-            )}
           </div>
-          <div className="asm-flags-inline">
-            {Object.entries(cur.flags).map(([flag, val]) => {
-              const isActive = val === 1 || val === true
-              const wasActive = prev ? (prev.flags[flag] === 1 || prev.flags[flag] === true) : false
-              const justChanged = prev !== null && isActive !== wasActive
-              return (
-                <span key={flag} className={`asm-flag-pill ${isActive ? 'active' : ''} ${justChanged ? 'pulse' : ''}`} title={FLAG_DESCS[flag] || ''}>
-                  {flag}
-                </span>
-              )
-            })}
-            {cur.flagHint && <span className="asm-flag-hint-inline">{cur.flagHint}</span>}
-          </div>
+
+          {!termFloating && (
+            <div className={`asm-terminal-drawer asm-terminal-docked ${termVisible ? 'open' : ''}`} style={termVisible ? { height: termH + 34 } : undefined}>
+              {termVisible && <div className="asm-terminal-resize" onMouseDown={onTermDown} />}
+              {renderTerminalPanel(false)}
+            </div>
+          )}
         </div>
         {!rightCollapsed && <div className="asm-resize-handle asm-resize-col" onMouseDown={onColDown(1)} />}
 
@@ -777,63 +894,11 @@ Calculez des expressions C/asm en live"><i className="fa-solid fa-calculator" />
         )}
       </div>
 
-      {/* Terminal drawer (docked) */}
-      {!termFloating && (
-        <div className={`asm-terminal-drawer ${termVisible ? 'open' : ''}`} style={termVisible ? { height: termH + 34 } : undefined}>
-          {termVisible && <div className="asm-terminal-resize" onMouseDown={onTermDown} />}
-          <div className="asm-terminal-drawer-bar" onClick={() => setTermVisible(v => !v)}>
-            <span className="asm-terminal-title">Terminal</span>
-            <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} ligne${termOutput.length > 1 ? 's' : ''}` : ''}</span>
-            <div className="asm-terminal-actions" onClick={e => e.stopPropagation()}>
-              <button className="asm-terminal-action" onClick={() => setTermOutput([])} data-tip="Vider le terminal">clear</button>
-              <button className="asm-terminal-action" onClick={() => { setTermFloating(true); setTermVisible(true) }} data-tip="Détacher le terminal"><i className="fa-solid fa-up-right-from-square" /></button>
-              <button className="asm-terminal-action" onClick={() => setTermVisible(v => !v)} data-tip={termVisible ? 'Réduire le terminal' : 'Agrandir le terminal'}>{termVisible ? '\u25BC' : '\u25B2'}</button>
-            </div>
-          </div>
-          {termVisible && (
-            <div className="asm-terminal-body" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
-              {termOutput.map((line, i) => {
-                const cls = line.startsWith('$') ? 'cmd' : line.toLowerCase().includes('error') ? 'err' : line.startsWith('►') ? 'step' : line.startsWith('  ↳') ? 'output' : 'out'
-                return <div key={i} className={`asm-terminal-line ${cls}`}>{line}</div>
-              })}
-              {IS_LIVE && gdb.state === 'connected' && !gdb.programExited ? (
-                <form className="asm-terminal-stdin" onSubmit={e => { e.preventDefault(); if (stdinInput) { gdb.sendStdin(stdinInput + '\n'); setTermOutput(prev => [...prev, `< ${stdinInput}`]); setStdinInput('') } }}>
-                  <span className="asm-terminal-stdin-prompt">&gt;</span>
-                  <input className="asm-terminal-stdin-input" value={stdinInput} onChange={e => setStdinInput(e.target.value)} placeholder="stdin (entrée programme)..." autoComplete="off" />
-                </form>
-              ) : (
-                <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Terminal floating popover */}
+      {/* Terminal modal */}
       {termFloating && termVisible && (
-        <div className="asm-terminal-float">
-          <div className="asm-terminal-float-header">
-            <span className="asm-terminal-title">Terminal</span>
-            <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} lignes` : ''}</span>
-            <div className="asm-terminal-actions">
-              <button className="asm-terminal-action" onClick={() => setTermOutput([])}>clear</button>
-              <button className="asm-terminal-action" onClick={() => setTermFloating(false)} data-tip="Ancrer le terminal"><i className="fa-solid fa-down-left-and-up-right-to-center" /></button>
-              <button className="asm-terminal-action" onClick={() => setTermVisible(false)}>&times;</button>
-            </div>
-          </div>
-          <div className="asm-terminal-body" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
-            {termOutput.map((line, i) => {
-              const cls = line.startsWith('$') ? 'cmd' : line.toLowerCase().includes('error') ? 'err' : line.startsWith('►') ? 'step' : line.startsWith('  ↳') ? 'output' : 'out'
-              return <div key={i} className={`asm-terminal-line ${cls}`}>{line}</div>
-            })}
-            {IS_LIVE && gdb.state === 'connected' && !gdb.programExited ? (
-              <form className="asm-terminal-stdin" onSubmit={e => { e.preventDefault(); if (stdinInput) { gdb.sendStdin(stdinInput + '\n'); setTermOutput(prev => [...prev, `< ${stdinInput}`]); setStdinInput('') } }}>
-                <span className="asm-terminal-stdin-prompt">&gt;</span>
-                <input className="asm-terminal-stdin-input" value={stdinInput} onChange={e => setStdinInput(e.target.value)} placeholder="stdin (entrée programme)..." autoComplete="off" />
-              </form>
-            ) : (
-              <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
-            )}
+        <div className="asm-terminal-modal-overlay" onMouseDown={() => setTermFloating(false)}>
+          <div className="asm-terminal-float" onMouseDown={e => e.stopPropagation()}>
+            {renderTerminalPanel(true)}
           </div>
         </div>
       )}
