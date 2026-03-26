@@ -5,7 +5,18 @@
 # Run:     docker run -p 8080:8080 asmble
 # ─────────────────────────────────────────────────────────
 
-# ── Stage 1: Build frontend ─────────────────────────────
+# ── Stage 1: Build nsjail ───────────────────────────────
+FROM ubuntu:24.04@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c AS nsjail-build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    autoconf bison flex gcc g++ git make pkg-config ca-certificates \
+    protobuf-compiler libprotobuf-dev libnl-3-dev libnl-route-3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --recurse-submodules https://github.com/google/nsjail /nsjail \
+    && cd /nsjail && make -j$(nproc) && strip nsjail
+
+# ── Stage 2: Build frontend ─────────────────────────────
 FROM node:22-slim@sha256:80fdb3f57c815e1b638d221f30a826823467c4a56c8f6a8d7aa091cd9b1675ea AS frontend-build
 
 WORKDIR /app
@@ -18,7 +29,7 @@ ENV VITE_LIVE_MODE=true
 RUN npm run build
 
 
-# ── Stage 2: Runtime ─────────────────────────────────────
+# ── Stage 3: Runtime ─────────────────────────────────────
 FROM ubuntu:24.04@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c
 
 LABEL org.opencontainers.image.title="ASMBLE" \
@@ -46,7 +57,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libglib2.0-0 \
     file \
+    libnl-3-200 \
+    libnl-route-3-200 \
+    libprotobuf32t64 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+# nsjail binary from build stage
+COPY --from=nsjail-build /nsjail/nsjail /usr/local/bin/nsjail
 
 # Python backend + pwndbg — single layer, purge git after clone
 WORKDIR /app/backend

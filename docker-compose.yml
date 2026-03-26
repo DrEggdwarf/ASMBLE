@@ -14,14 +14,21 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ASMBLE_MAX_SESSIONS=10
-      - ASMBLE_CORS_ORIGINS=http://localhost:8080
+      - ASMBLE_MAX_SESSIONS=5
+      - ASMBLE_SESSION_IDLE_TIMEOUT=600
+    # nsjail requires prctl(PR_SET_SECUREBITS) — incompatible with no-new-privileges
+    # nsjail requires mount operations inside namespaces — needs AppArmor unconfined
+    # Security maintained via: read_only rootfs, cap_drop ALL, minimal cap_add, nsjail isolation
     security_opt:
-      - no-new-privileges:true
+      - apparmor:unconfined    # nsjail needs mount/pivot_root
+      - seccomp:unconfined     # nsjail needs pivot_root, mount, clone
     cap_drop:
       - ALL
     cap_add:
       - SYS_PTRACE     # required for GDB
+      - SYS_ADMIN       # required for nsjail namespace creation
+      - SETPCAP          # required for nsjail prctl(PR_SET_SECUREBITS)
+      - NET_ADMIN        # required for nsjail loopback interface in network ns
       - DAC_OVERRIDE    # nginx pid/log files
       - CHOWN           # nginx temp dir ownership
       - SETUID          # supervisor → nginx worker

@@ -25,8 +25,9 @@ GDB_REG_NAMES = [
 class GdbBridge:
     """Wrapper autour de pygdbmi pour piloter une session GDB."""
 
-    def __init__(self, binary_path: str):
+    def __init__(self, binary_path: str, gdb_command: list[str] | None = None):
         self.binary_path = binary_path
+        self._gdb_command = gdb_command or ["gdb", "--interpreter=mi3", "-nh", binary_path]
         self.gdb: GdbController | None = None
         self._prev_regs: dict[str, int] = {}
         self._prev_rip: int | None = None
@@ -45,7 +46,7 @@ class GdbBridge:
     def start(self) -> None:
         """Lance GDB en mode MI sur le binaire."""
         self.gdb = GdbController(
-            command=["gdb", "--interpreter=mi3", "-nh", self.binary_path],
+            command=self._gdb_command,
             time_to_check_for_additional_output_sec=0.05,
         )
         # Placer un breakpoint à _start et lancer

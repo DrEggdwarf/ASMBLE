@@ -30,7 +30,7 @@
 | B6 | ~~**Image base non pinnée**~~ ✅ : `node:22-slim` et `ubuntu:24.04` pinnés par digest SHA256 | `Dockerfile` | ~~Moyenne~~ |
 | B7 | ~~**Dependency confusion (pip)**~~ ✅ : versions exactes pinnées (`==X.Y.Z`) | `requirements.txt` | ~~Moyenne~~ |
 | B8 | ~~**CI `ubuntu-latest`**~~ ✅ : `ubuntu-24.04` pinné, versions outils pinnées | `.github/workflows/` | ~~Moyenne~~ |
-| B9 | **Sandbox insuffisant** : `sandbox.py` n'applique que des rlimits (CPU, RAM, nproc). Le binaire exécuté partage le même namespace réseau/PID/filesystem que le backend → un `execve("/bin/sh")` ou `connect()` donne accès au système. Nécessite nsjail ou équivalent. | `sandbox.py` | **Critique** (sécu) |
+| B9 | ~~**Sandbox insuffisant**~~ ✅ : remplacé par nsjail (mount+network+IPC namespace isolation) | `sandbox.py` | ~~Critique~~ |
 
 ---
 
@@ -444,50 +444,20 @@ Visualisation en blocs :
 | 9.4 | ~~**B8**~~ ✅ | CI : `runs-on: ubuntu-24.04` au lieu de `ubuntu-latest` | Faible |
 | 9.5 | ~~**B8**~~ ✅ | CI : versions pinnées des outils (`pytest==9.0.2`, etc.) | Faible |
 
-### Sprint 10 — Sandbox & Isolation (pré-VPS) 🛡️
-> **Objectif** : isoler le code assembleur exécuté pour que même un syscall malveillant ne puisse pas attaquer le système hôte. C'est LE sprint critique avant tout déploiement public.
+### Sprint 10 — Sandbox & Isolation (pré-VPS) 🛡️ ✅
+> **Objectif** : isoler le code assembleur exécuté pour que même un syscall malveillant ne puisse pas attaquer le système hôte.
 >
-> **Problème actuel** : le binaire assemblé tourne dans le même namespace réseau/PID/filesystem que le backend FastAPI. Un `execve("/bin/sh")` ou un `connect()` donne un shell/réseau complet. Les rlimits dans `sandbox.py` ne limitent que les ressources, pas les permissions.
->
-> **Modèle cible** : chaque binaire exécuté tourne dans un conteneur éphémère isolé (inspiré pwn.college), ou au minimum dans un namespace isolé par nsjail/bubblewrap.
+> **Solution** : nsjail (Google) compilé dans le Dockerfile, chaque session GDB tourne dans un jail avec mount+network+IPC namespace isolation, rlimits, et time limit. En dev local (sans nsjail), fallback rlimits seuls.
 
-| # | Item | Description | Effort | Priorité |
-|---|------|-------------|--------|----------|
-| 10.1 | **Sandbox nsjail** | Remplacer `sandbox.py` (rlimits) par nsjail pour l'exécution GDB+binaire. Chaque session = un jail avec : mount namespace (rootfs readonly), PID namespace, network namespace (no network), user namespace (nobody), seccomp profile strict, cgroups (CPU+RAM). Installer nsjail dans le Dockerfile. | Élevé | P0 |
-| 10.2 | **Seccomp pour le binaire** | Appliquer le profil `seccomp-profile.json` au processus GDB inférieur (le binaire exécuté), pas au conteneur entier. Utiliser `prctl(PR_SET_SECCOMP)` ou la config nsjail. Laisser GDB lui-même hors seccomp (il a besoin de ptrace). | Moyen | P0 |
-| 10.3 | **Network isolation** | Le binaire utilisateur ne doit JAMAIS pouvoir ouvrir de socket. Bloquer `socket`, `connect`, `bind`, `listen`, `accept` dans le seccomp, et isoler dans un network namespace vide (nsjail `--disable_clone_newnet=false`). | Faible | P0 |
-| 10.4 | **Filesystem isolation** | Le binaire ne voit que son workspace tmpfs (`/tmp/asm-xxx/`). Pas d'accès à `/app`, `/etc`, `/home`, `/proc` (sauf son propre PID via GDB). Mount namespace avec bind mounts minimaux. | Moyen | P0 |
-| 10.5 | **Limiter sessions à 5** | Configurer `ASMBLE_MAX_SESSIONS=5` par défaut pour VPS. Chaque session = 1 jail nsjail. Afficher le nombre de sessions restantes dans le health endpoint. | Faible | P1 |
-| 10.6 | **Timeout session auto** | Auto-cleanup des sessions inactives après 10 minutes (pas de WebSocket activity). Évite l'accumulation de jails zombies. | Faible | P1 |
-| 10.7 | **Monitoring sessions** | Logger les créations/destructions de sessions, les échecs d'assemblage, les timeouts. Exposer des métriques basiques dans `/api/health/detailed`. | Faible | P2 |
-
-#### Architecture nsjail cible
-
-```
-┌─ Docker container (read-only rootfs) ──────────────────────┐
-│  supervisord                                               │
-│  ├── nginx :8080 (reverse proxy)                           │
-│  └── uvicorn :8000 (FastAPI)                               │
-│       │                                                    │
-│       ├── Session 1                                        │
-│       │   └── nsjail ─── GDB ─── binaire.elf               │
-│       │       ├── PID namespace (isolé)                    │
-│       │       ├── Network namespace (vide, pas de réseau)  │
-│       │       ├── Mount namespace (only /tmp/asm-xxx/)     │
-│       │       ├── Seccomp (whitelist syscalls)             │
-│       │       └── Cgroups (CPU 10s, RAM 256MB)             │
-│       │                                                    │
-│       ├── Session 2                                        │
-│       │   └── nsjail ─── GDB ─── binaire.elf               │
-│       │       └── (même isolation)                         │
-│       └── ...                                              │
-└────────────────────────────────────────────────────────────┘
-```
-
-#### Pourquoi nsjail et pas Docker-in-Docker ?
-- **nsjail** : léger (~1 binaire), conçu exactement pour ça (Google l'utilise pour ses CTF platforms), pas besoin de Docker socket, latence minimale (~10ms de setup).
-- **DinD** : lourd, nécessite `--privileged` ou Docker socket bind mount (pire pour la sécu), latence de ~2-5s pour chaque session.
-- **bubblewrap** : alternative viable mais moins de features (pas de cgroups intégrés, pas de seccomp intégré).
+| # | Item | Description | Effort |
+|---|------|-------------|--------|
+| 10.1 | ~~**Sandbox nsjail**~~ ✅ | nsjail compilé dans le Dockerfile (multi-stage), `build_gdb_command()` wraps GDB dans nsjail. Mount ns (seuls /lib,/usr,/bin,/sbin,/etc + workdir), network ns (vide, pas de réseau), IPC ns isolé. Fallback rlimits si nsjail absent. | Élevé |
+| 10.2 | ~~**Network isolation**~~ ✅ | `--clone_newnet` par défaut (enabled) → le binaire ne peut ouvrir aucun socket. Vérifié en test. | Faible |
+| 10.3 | ~~**Filesystem isolation**~~ ✅ | Le binaire ne voit que `/lib`, `/usr`, `/bin`, `/sbin`, `/etc` (read-only) + son workdir (writable). Pas d'accès à `/app`, `/home`, `/root`. Vérifié via `ls /` dans le jail. | Moyen |
+| 10.4 | ~~**Max sessions = 5**~~ ✅ | `ASMBLE_MAX_SESSIONS=5` par défaut. Sessions count dans `/api/health`. | Faible |
+| 10.5 | ~~**Timeout session auto**~~ ✅ | Auto-cleanup des sessions inactives après 10min (`ASMBLE_SESSION_IDLE_TIMEOUT=600`). Background loop toutes les 60s. `Session.touch()` sur chaque message WS. | Faible |
+| 10.6 | ~~**Monitoring sessions**~~ ✅ | Logging structuré create/destroy/evict/stale. `/api/health/detailed` expose nsjail status, idle timeout, sessions count. | Faible |
+| 10.7 | ~~**46 tests**~~ ✅ | 7 nouveaux tests : sandbox command builder (fallback, binary path, workdir mounted), session manager (touch, cleanup_stale, keeps_active, max_sessions). | Faible |
 
 ### Sprint 11 — Exploit Tools natifs pwndbg 🔧
 > **Objectif** : remplacer l'implémentation custom de `exploit_tools.py` par les commandes natives de pwndbg (plus fiables, plus complètes, déjà installé).

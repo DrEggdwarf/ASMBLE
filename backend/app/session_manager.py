@@ -5,16 +5,20 @@ Session Manager — Gère les sessions GDB actives.
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 import subprocess
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 from .gdb_bridge import GdbBridge
 from .models import AssembleResponse
-from .sandbox import apply_sandbox_limits
+from .sandbox import apply_sandbox_limits, build_gdb_command
+
+log = logging.getLogger("asmble.sessions")
 
 
 # Assembleurs supportés
@@ -60,6 +64,11 @@ class Session:
         self.bridge: GdbBridge | None = None
         self.last_code: str = ""
         self.last_flavor: str = "nasm"
+        self.last_activity: float = time.monotonic()
+
+    def touch(self) -> None:
+        """Update last activity timestamp."""
+        self.last_activity = time.monotonic()
 
     @property
     def binary_path(self) -> str:
@@ -140,9 +149,10 @@ class Session:
         )
 
     def start_debug(self) -> None:
-        """Lance GDB sur le binaire assemblé."""
+        """Lance GDB sur le binaire assemblé (sandboxé via nsjail si disponible)."""
         bin_path = self.workdir / "binary"
-        self.bridge = GdbBridge(str(bin_path))
+        gdb_cmd = build_gdb_command(str(bin_path), str(self.workdir))
+        self.bridge = GdbBridge(str(bin_path), gdb_command=gdb_cmd)
         self.bridge.start()
 
     def cleanup(self) -> None:
@@ -164,6 +174,7 @@ class SessionManager:
     async def create_session(self, code: str, flavor: str = "nasm") -> tuple[Session, AssembleResponse]:
         if len(self.sessions) >= self.max_sessions:
             oldest_id = next(iter(self.sessions))
+            log.info("Max sessions reached — evicting %s", oldest_id)
             await self.destroy_session(oldest_id)
 
         session_id = uuid.uuid4().hex[:12]
@@ -175,8 +186,10 @@ class SessionManager:
         if result.success:
             await asyncio.to_thread(session.start_debug)
             self.sessions[session_id] = session
+            log.info("Session %s created (%d/%d)", session_id, self.active_count, self.max_sessions)
         else:
             session.cleanup()
+            log.warning("Session %s assembly failed", session_id)
 
         return session, result
 
@@ -184,6 +197,17 @@ class SessionManager:
         session = self.sessions.pop(session_id, None)
         if session:
             session.cleanup()
+            log.info("Session %s destroyed (%d/%d)", session_id, self.active_count, self.max_sessions)
+
+    async def cleanup_stale(self, max_idle_secs: int = 600) -> int:
+        """Remove sessions idle for more than max_idle_secs. Returns count removed."""
+        now = time.monotonic()
+        stale = [sid for sid, s in self.sessions.items()
+                 if now - s.last_activity > max_idle_secs]
+        for sid in stale:
+            log.info("Auto-cleanup stale session %s (idle >%ds)", sid, max_idle_secs)
+            await self.destroy_session(sid)
+        return len(stale)
 
     async def cleanup_all(self) -> None:
         for sid in list(self.sessions):

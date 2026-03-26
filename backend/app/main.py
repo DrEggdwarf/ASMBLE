@@ -17,11 +17,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from .session_manager import SessionManager
 from .security import checksec, vmmap, got_entries
 from .exploit_tools import cyclic, cyclic_find, rop_search
+from .sandbox import NSJAIL_AVAILABLE
 
 log = logging.getLogger("asmble")
 logging.basicConfig(level=logging.INFO)
 
-max_sessions = int(os.environ.get("ASMBLE_MAX_SESSIONS", "10"))
+max_sessions = int(os.environ.get("ASMBLE_MAX_SESSIONS", "5"))
+session_idle_timeout = int(os.environ.get("ASMBLE_SESSION_IDLE_TIMEOUT", "600"))
 allowed_origins = os.environ.get(
     "ASMBLE_CORS_ORIGINS",
     "http://localhost:5173,http://localhost:8080",
@@ -31,8 +33,19 @@ manager = SessionManager(max_sessions=max_sessions)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_session_cleanup_loop())
+    log.info("ASMBLE backend started (max_sessions=%d, idle_timeout=%ds, nsjail=%s)",
+             max_sessions, session_idle_timeout, NSJAIL_AVAILABLE)
     yield
+    task.cancel()
     await manager.cleanup_all()
+
+
+async def _session_cleanup_loop() -> None:
+    """Periodically remove sessions idle for too long."""
+    while True:
+        await asyncio.sleep(60)
+        await manager.cleanup_stale(session_idle_timeout)
 
 
 app = FastAPI(
@@ -54,7 +67,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "sessions": manager.active_count}
+    return {"status": "ok", "sessions": manager.active_count, "max_sessions": max_sessions}
 
 
 @app.get("/api/health/detailed")
@@ -64,9 +77,11 @@ async def health_detailed():
         "status": "ok",
         "sessions": manager.active_count,
         "max_sessions": max_sessions,
+        "session_idle_timeout": session_idle_timeout,
+        "nsjail": NSJAIL_AVAILABLE,
         "tools": {},
     }
-    for tool in ("nasm", "gdb", "yasm", "gcc"):
+    for tool in ("nasm", "gdb", "yasm", "gcc", "nsjail"):
         checks["tools"][tool] = shutil.which(tool) is not None
     try:
         import pygdbmi  # noqa: F401
@@ -340,6 +355,12 @@ async def websocket_endpoint(ws: WebSocket):
                 })
                 continue
             _rl_tokens -= 1.0
+
+            # Track session activity for auto-cleanup
+            if session_id:
+                s = manager.get(session_id)
+                if s:
+                    s.touch()
 
             if msg_type == "disconnect":
                 break
