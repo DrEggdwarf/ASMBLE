@@ -715,7 +715,7 @@ Recharge le binaire dans GDB"><i className="fa-solid fa-rotate-left" /> Reset</b
             {cur.jumped && <span className="asm-jump-badge small"><i className="fa-solid fa-bolt" /> JUMP</span>}
             <span>{cur.annotation}</span>
           </div>
-          {code.length === 0 && !emptyDismissed && (
+          {code.length === 0 && !emptyDismissed && !tourOpen && (
             <div className="asm-empty-state">
               <div className="asm-empty-icon"><i className="fa-solid fa-microchip" /></div>
               <div className="asm-empty-title">Écrivez du code assembleur x86-64</div>
