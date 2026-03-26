@@ -136,6 +136,10 @@ Bridge complet FastAPI ↔ GDB avec stepping temps réel :
 - [x] Cyclic patterns (De Bruijn) — génération + recherche offset
 - [x] ROP gadget search (ROPgadget)
 - [x] Sous-section Exploit Tools dans SecurityPanel
+- [x] **pwndbg natif** — cyclic/rop/telescope/search via GDB bridge (`pwndbg_tools.py`)
+- [x] Fallback custom (`exploit_tools.py`) si pwndbg non disponible
+- [x] `gdb_command_logged()` — capture fiable de la sortie async pwndbg (flush + drain + ANSI strip)
+- [x] 2 nouveaux WS message types : `telescope`, `search`
 
 ### Phase 3c-3d — Futures 📋
 
@@ -215,9 +219,10 @@ Pattern « textarea invisible + highlight overlay » :
 ## Conteneurisation Docker
 
 ```
-Dockerfile (multi-stage)
-├── Stage 1: node:22-slim → npm ci + vite build
-└── Stage 2: ubuntu:24.04 → python + GDB + nasm + pwndbg + dist/
+Dockerfile (multi-stage, 3 stages)
+├── Stage 1: ubuntu:24.04 → nsjail compilation
+├── Stage 2: node:22-slim → npm ci + vite build
+└── Stage 3: ubuntu:24.04 → python + GDB + nasm + pwndbg + nsjail + dist/
 
 Ports:
   8080 → Nginx (proxy, reverse proxy + static files)

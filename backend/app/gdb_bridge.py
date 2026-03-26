@@ -171,15 +171,72 @@ class GdbBridge:
         """Définit les arguments du programme."""
         self._write(f"-exec-arguments {args}")
 
-    def gdb_command(self, cmd: str) -> str:
+    def gdb_command(self, cmd: str, timeout_sec: int = 5) -> str:
         """Exécute une commande GDB brute et retourne la sortie."""
         escaped = cmd.replace('\\', '\\\\').replace('"', '\\"')
-        resp = self._write(f'-interpreter-exec console "{escaped}"')
+        resp = self._write(f'-interpreter-exec console "{escaped}"', timeout_sec=timeout_sec)
         lines: list[str] = []
         for item in resp:
             if item.get("type") == "console":
                 lines.append(item.get("payload", "").rstrip("\n"))
+        # Drain additional async console output (pwndbg commands produce delayed output)
+        for _attempt in range(3):
+            try:
+                extra = self.gdb.get_gdb_response(timeout_sec=0.3, raise_error_on_timeout=False)
+                if not extra:
+                    break
+                for item in extra:
+                    if item.get("type") == "console":
+                        lines.append(item.get("payload", "").rstrip("\n"))
+            except Exception:
+                break
         return "\n".join(lines)
+
+    def gdb_command_logged(self, cmd: str, timeout_sec: int = 30) -> str:
+        """Execute a GDB command with thorough output capture.
+
+        Flushes any pending async output first, then runs the command
+        with extra drain passes for pwndbg commands that produce delayed output.
+        Strips ANSI escape codes from output.
+        """
+        import re
+        import time
+
+        _ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+        # Flush any pending async output from previous commands
+        for _ in range(10):
+            try:
+                pending = self.gdb.get_gdb_response(timeout_sec=0.1, raise_error_on_timeout=False)
+                if not pending:
+                    break
+            except Exception:
+                break
+
+        # Execute the command via MI console
+        escaped = cmd.replace('\\', '\\\\').replace('"', '\\"')
+        resp = self._write(f'-interpreter-exec console "{escaped}"', timeout_sec=timeout_sec)
+        lines: list[str] = []
+        for item in resp:
+            if item.get("type") == "console":
+                lines.append(item.get("payload", "").rstrip("\n"))
+
+        # Aggressively drain async output (pwndbg outputs asynchronously)
+        time.sleep(0.3)
+        for _ in range(20):
+            try:
+                extra = self.gdb.get_gdb_response(timeout_sec=0.2, raise_error_on_timeout=False)
+                if not extra:
+                    break
+                for item in extra:
+                    if item.get("type") == "console":
+                        lines.append(item.get("payload", "").rstrip("\n"))
+            except Exception:
+                break
+
+        result = "\n".join(lines)
+        # Strip ANSI escape sequences (pwndbg uses colored output)
+        return _ANSI_ESCAPE.sub("", result)
 
     def get_backtrace(self) -> list[FrameInfo]:
         """Retourne la pile d'appels."""
@@ -333,10 +390,10 @@ class GdbBridge:
             if text:
                 self._pending_output.append(text)
 
-    def _write(self, cmd: str) -> list[dict]:
+    def _write(self, cmd: str, timeout_sec: int = 5) -> list[dict]:
         """Envoie une commande GDB/MI et retourne la réponse."""
         assert self.gdb is not None, "GDB not started"
-        resp = self.gdb.write(cmd, timeout_sec=5)
+        resp = self.gdb.write(cmd, timeout_sec=timeout_sec)
         for item in resp:
             self._capture_output(item)
         return resp

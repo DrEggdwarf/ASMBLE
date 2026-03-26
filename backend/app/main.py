@@ -17,6 +17,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from .session_manager import SessionManager
 from .security import checksec, vmmap, got_entries
 from .exploit_tools import cyclic, cyclic_find, rop_search
+from .pwndbg_tools import (
+    pwndbg_cyclic, pwndbg_cyclic_find, pwndbg_rop,
+    pwndbg_telescope, pwndbg_search, pwndbg_checksec,
+)
 from .sandbox import NSJAIL_AVAILABLE
 
 log = logging.getLogger("asmble")
@@ -285,22 +289,64 @@ async def websocket_endpoint(ws: WebSocket):
     async def _h_cyclic(data: dict) -> str | None:
         length = int(data.get("length", 200))
         n = int(data.get("n", 4))
-        pattern = cyclic(length, n)
+        # Try pwndbg native first (needs active GDB session)
+        pattern = None
+        if session_id:
+            session = manager.get(session_id)
+            if session and session.bridge:
+                pattern = await asyncio.to_thread(pwndbg_cyclic, session.bridge, length, n)
+        # Fallback to custom implementation
+        if pattern is None:
+            pattern = cyclic(length, n)
         await ws.send_json({"type": "cyclic", "pattern": pattern})
         return None
 
     async def _h_cyclic_find(data: dict) -> str | None:
         value = data.get("value", "")
         n = int(data.get("n", 4))
-        offset = cyclic_find(value, n)
+        # Try pwndbg native first
+        offset = None
+        if session_id:
+            session = manager.get(session_id)
+            if session and session.bridge:
+                offset = await asyncio.to_thread(pwndbg_cyclic_find, session.bridge, value, n)
+        # Fallback to custom implementation
+        if offset is None:
+            offset = cyclic_find(value, n)
         await ws.send_json({"type": "cyclic_find", "value": value, "offset": offset})
         return None
 
     async def _h_rop(data: dict) -> str | None:
         session = _get(session_id)
         filter_str = data.get("filter", "")
-        gadgets = await asyncio.to_thread(rop_search, session.binary_path, filter_str)
+        # Try pwndbg native first
+        gadgets = None
+        if session.bridge:
+            gadgets = await asyncio.to_thread(pwndbg_rop, session.bridge, filter_str)
+        # Fallback to custom ROPgadget subprocess
+        if gadgets is None:
+            gadgets = await asyncio.to_thread(rop_search, session.binary_path, filter_str)
         await ws.send_json({"type": "rop", "gadgets": gadgets})
+        return None
+
+    async def _h_telescope(data: dict) -> str | None:
+        session = _get(session_id)
+        addr = data.get("addr", "$rsp")
+        count = int(data.get("count", 10))
+        entries = None
+        if session.bridge:
+            entries = await asyncio.to_thread(pwndbg_telescope, session.bridge, addr, count)
+        await ws.send_json({"type": "telescope", "entries": entries or []})
+        return None
+
+    async def _h_search(data: dict) -> str | None:
+        session = _get(session_id)
+        value = data.get("value", "")
+        type_ = data.get("search_type", "bytes")
+        results = None
+        if session.bridge:
+            results = await asyncio.to_thread(pwndbg_search, session.bridge, value, type_)
+        await ws.send_json({"type": "search", "results": results or []})
         return None
 
     dispatch: dict[str, object] = {
@@ -328,6 +374,8 @@ async def websocket_endpoint(ws: WebSocket):
         "cyclic": _h_cyclic,
         "cyclic_find": _h_cyclic_find,
         "rop": _h_rop,
+        "telescope": _h_telescope,
+        "search": _h_search,
     }
 
     # ── rate limiter (token bucket) ──

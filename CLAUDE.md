@@ -28,10 +28,10 @@ GitHub: https://github.com/DrEggdwarf/ASMBLE
 - Snippet templates drawer (6 templates: Hello World, Boucle, Fonction, Stack Frame, Conditions, Tableau)
 - Live/mock toggle via `VITE_LIVE_MODE` env var
 - Connection indicator dot in header
-- Security panel: checksec badges (RELRO, NX, PIE, Canary), vmmap table, GOT table, exploit tools (cyclic patterns, ROP gadgets)
+- Security panel: checksec badges (RELRO, NX, PIE, Canary), vmmap table, GOT table, exploit tools (cyclic patterns, ROP gadgets, telescope, search)
 
 **Backend**: Fully operational (Python 3.12+ / FastAPI / pygdbmi)
-- FastAPI WebSocket endpoint (`/api/ws`) — 21 message types
+- FastAPI WebSocket endpoint (`/api/ws`) — 26 message types
 - pygdbmi → StepSnapshot bridge (GDB/MI3 protocol)
 - Step ~170ms, reset ~1s, build & run ~1.2s
 - Off-by-one fix: highlight matches instruction that caused changes
@@ -39,11 +39,12 @@ GitHub: https://github.com/DrEggdwarf/ASMBLE
 - Breakpoints (conditional), watchpoints, reverse step
 - Annotations pédagogiques FR auto-générées (14 dynamic + ~25 static)
 - Multi-assembler: NASM, GAS, FASM, YASM
-- Sandbox: rlimit (CPU 10s, AS 256MB, NPROC 10, FSIZE 1MB)
-- Session management: max 10 sessions, auto-cleanup
+- Sandbox: nsjail (mount/network/IPC namespaces) + rlimit fallback
+- Session management: max 5 sessions, auto-cleanup idle
 - Pydantic v2 models for all data structures
 - Security analysis: checksec (pyelftools), vmmap (/proc/pid/maps), GOT entries
-- pwndbg installed in Docker for advanced GDB features
+- pwndbg native tools: cyclic, rop, telescope, search, checksec via GDB bridge
+- Custom exploit_tools.py kept as fallback when pwndbg unavailable
 - Auto-checksec after assembly
 
 ## Files
@@ -92,13 +93,14 @@ asmble/
 ├── backend/
 │   ├── requirements.txt    # Python deps (fastapi, pygdbmi, etc.)
 │   └── app/
-│       ├── main.py             # FastAPI app + WS endpoint (24 msg types) + rate limiting
+│       ├── main.py             # FastAPI app + WS endpoint (26 msg types) + rate limiting
 │       ├── models.py           # Pydantic v2 models (StepSnapshot, etc.)
 │       ├── gdb_bridge.py       # pygdbmi → StepSnapshot bridge
 │       ├── session_manager.py  # Session lifecycle + assembly
-│       ├── sandbox.py          # rlimit sandboxing
+│       ├── sandbox.py          # nsjail sandboxing + rlimits
 │       ├── security.py         # checksec, vmmap, got analysis (pyelftools)
-│       ├── exploit_tools.py    # cyclic patterns (De Bruijn) + ROP gadget search
+│       ├── exploit_tools.py     # Cyclic patterns (De Bruijn) + ROP (fallback)
+│       ├── pwndbg_tools.py     # pwndbg native: cyclic, rop, telescope, search
 │       └── annotations.py      # Pedagogical annotations (FR)
 ├── docker/
 │   ├── nginx.conf              # Reverse proxy config
@@ -107,8 +109,10 @@ asmble/
 ├── tests/
 │   ├── test_models.py          # Pydantic model tests
 │   ├── test_annotations.py     # Annotation generator tests
-│   ├── test_exploit_tools.py   # Cyclic pattern tests
+│   ├── test_exploit_tools.py    # Cyclic pattern tests
+│   ├── test_pwndbg_tools.py    # pwndbg native tool parser tests
 │   ├── test_sandbox.py         # Sandbox limits tests
+│   ├── test_session_manager.py # Session management tests
 │   └── test_api.py             # FastAPI health endpoint test
 ├── .github/
 │   └── workflows/
@@ -128,9 +132,12 @@ See `docs/ARCHITECTURE.md` for full details.
 - **Phase 1** ✅ : Frontend mock (éditeur, registres, stack, lexique)
 - **Phase 2** ✅ : Backend GDB/MI réel (FastAPI + pygdbmi + Docker)
 - **Phase 3a** ✅ : Sécurité (pwndbg, checksec, vmmap, GOT)
-- **Phase 3b** ✅ : Outils d'exploitation (cyclic, ROP gadgets)
+- **Phase 3b** ✅ : Outils d'exploitation (cyclic, ROP gadgets, pwndbg natif)
 - **Sprint 6** ✅ : Éditeur avancé (minimap, context menu, breadcrumb, sparkline ⏸️)
 - **Sprint 7** ✅ : Onboarding & Infra (tour guidé, tooltips riches, 39 tests, CI/CD, rate limiting)
+- **Sprint 9** ✅ : Supply chain hardening (pinned deps, SHA256 digests, CI hardened)
+- **Sprint 10** ✅ : Sandbox & Isolation (nsjail, namespace isolation, session management)
+- **Sprint 11** ✅ : Exploit Tools natifs pwndbg (cyclic/rop/telescope/search via GDB bridge)
 - **Phase 3c** 📋 : Heap visualizer
 - **Phase 3d** 📋 : Multi-architecture (ARM64, RISC-V)
 

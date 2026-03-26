@@ -459,17 +459,21 @@ Visualisation en blocs :
 | 10.6 | ~~**Monitoring sessions**~~ ✅ | Logging structuré create/destroy/evict/stale. `/api/health/detailed` expose nsjail status, idle timeout, sessions count. | Faible |
 | 10.7 | ~~**46 tests**~~ ✅ | 7 nouveaux tests : sandbox command builder (fallback, binary path, workdir mounted), session manager (touch, cleanup_stale, keeps_active, max_sessions). | Faible |
 
-### Sprint 11 — Exploit Tools natifs pwndbg 🔧
+### Sprint 11 — Exploit Tools natifs pwndbg 🔧 ✅
 > **Objectif** : remplacer l'implémentation custom de `exploit_tools.py` par les commandes natives de pwndbg (plus fiables, plus complètes, déjà installé).
 >
-> **Problème actuel** : `exploit_tools.py` réimplémente De Bruijn cyclic et appelle ROPgadget en subprocess — alors que pwndbg fournit `cyclic`, `cyclic -l`, `rop` nativement dans GDB.
+> **Solution** : nouveau module `pwndbg_tools.py` qui source pwndbg dans la session GDB à la demande,
+> puis route les commandes via `gdb_command_logged()` (flush/drain + ANSI strip). Custom `exploit_tools.py` conservé comme fallback.
 
 | # | Item | Description | Effort |
 |---|------|-------------|--------|
-| 11.1 | **Cyclic via pwndbg** | Remplacer `cyclic()` et `cyclic_find()` par des commandes GDB via le bridge : `cyclic 200` → parse output, `cyclic -l 0x61616162` → parse offset. Supprimer `_de_bruijn()` custom. | Faible |
-| 11.2 | **ROP via pwndbg** | Remplacer l'appel subprocess à ROPgadget par `rop` de pwndbg via GDB. Parse la sortie. Avantage : pas besoin de ROPgadget installé séparément. | Faible |
-| 11.3 | **Cleanup exploit_tools.py** | Soit supprimer le fichier entier (tout passe par GDB bridge), soit le garder comme fallback si pwndbg n'est pas dispo (mode dégradé). | Faible |
-| 11.4 | **Nouveaux outils pwndbg** | Exposer d'autres commandes pwndbg utiles : `checksec` natif, `heap` (pour futur Phase 3c), `search` (pattern in memory), `telescope` (stack inspection). | Moyen |
+| 11.1 | ~~**Cyclic via pwndbg**~~ ✅ | `pwndbg_cyclic()` et `pwndbg_cyclic_find()` via `cyclic N` / `cyclic -l VALUE` dans GDB bridge. Parse output texte. Fallback custom si pwndbg indisponible. | Faible |
+| 11.2 | ~~**ROP via pwndbg**~~ ✅ | `pwndbg_rop()` via `rop` / `rop --grep X` dans GDB bridge. Parse `0xADDR: gadget` lines. Fallback ROPgadget subprocess. | Faible |
+| 11.3 | ~~**Cleanup exploit_tools.py**~~ ✅ | Conservé comme fallback (mode dégradé sans pwndbg). `main.py` essaie pwndbg natif d'abord, puis custom. | Faible |
+| 11.4 | ~~**Nouveaux outils pwndbg**~~ ✅ | `telescope` (stack inspection), `search` (pattern in memory), `checksec` natif — 3 nouveaux WS message types (`telescope`, `search`). | Moyen |
+| 11.5 | ~~**gdb_command_logged**~~ ✅ | Nouvelle méthode `GdbBridge.gdb_command_logged()` : flush pending output → execute → drain async output → strip ANSI. Résout le problème de sortie asynchrone pwndbg en mode MI. | Moyen |
+| 11.6 | ~~**pwndbg env + nsjail**~~ ✅ | `PWNDBG_VENV_PATH`, `PWNDBG_NO_AUTOUPDATE`, `TERM=dumb` dans Dockerfile + sandbox nsjail. Mount `/opt/pwndbg` et `/app/venv` read-only dans nsjail. | Faible |
+| 11.7 | ~~**13 tests pwndbg**~~ ✅ | Tests unitaires : `_ensure_pwndbg`, parsers cyclic/cyclic_find/rop/telescope/search/checksec. 59 tests total (46→59). | Faible |
 
 ### Sprint 12 — Polish & Nice to have ✨
 > Dernières couches de polish.

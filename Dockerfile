@@ -100,9 +100,12 @@ COPY docker/seccomp-profile.json /etc/asmble/seccomp-profile.json
 
 # Non-root user for sandboxed code execution
 # GDB needs ptrace — supervisor/nginx stay root, user code runs as asmble
+ENV PWNDBG_VENV_PATH=/app/venv \
+    PWNDBG_NO_AUTOUPDATE=1 \
+    TERM=dumb
+
 RUN useradd --system --create-home --home-dir /home/asmble --shell /usr/sbin/nologin asmble \
-    && echo "source /opt/pwndbg/gdbinit.py" > /home/asmble/.gdbinit \
-    && echo "set auto-load safe-path /" >> /home/asmble/.gdbinit \
+    && echo "set auto-load safe-path /" > /home/asmble/.gdbinit \
     && chown -R asmble:asmble /home/asmble \
     && chmod 750 /home/asmble \
     && mkdir -p /var/log/nginx /var/lib/nginx /run \

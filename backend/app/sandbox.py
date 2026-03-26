@@ -79,11 +79,19 @@ def build_gdb_command(binary_path: str, workdir: str) -> list[str]:
     # Writable workdir (binary + source)
     cmd += ["-B", workdir]
 
+    # pwndbg and Python venv (read-only, needed for pwndbg commands inside GDB)
+    for pwndbg_path in ("/opt/pwndbg", "/app/venv"):
+        if Path(pwndbg_path).exists():
+            cmd += ["-R", pwndbg_path]
+
     # Environment
     cmd += [
         "--cwd", workdir,
         "-E", f"HOME={workdir}",
         "-E", "PATH=/usr/local/bin:/usr/bin:/bin:/sbin",
+        "-E", "PWNDBG_VENV_PATH=/app/venv",
+        "-E", "PWNDBG_NO_AUTOUPDATE=1",
+        "-E", "TERM=dumb",
     ]
 
     cmd += ["--", "/usr/bin/gdb", "--interpreter=mi3", "-nh", binary_path]
