@@ -26,6 +26,11 @@
 | B2 | `REST /api/assemble` (POST) crée une session sans cleanup — fuite de sessions si appelé directement | `main.py` | Basse |
 | B3 | CORS ouvert (`allow_origins=["*"]`) avec TODO dans le code | `main.py` | Basse (Docker isolé) |
 | B4 | ~~`eflags` inclus dans `changed` mais absent de `regs` → `BigInt(undefined)` crash React → écran noir~~ ✅ | `gdb_bridge.py`, `AsmEditor.tsx` | Critique |
+| B5 | **Dependency confusion (npm)** : `package.json` utilise des ranges `^` (ex: `^19.0.0`) — un attaquant peut publier une version supérieure vérolée sur npm. Fixer les versions exactes + vérifier `package-lock.json` | `package.json` | Moyenne (sécu) |
+| B6 | **Image base non pinnée** : `FROM ubuntu:24.04` utilise un tag mutable — risque de supply chain attack si le tag est re-poussé avec un contenu malveillant. Pinner par digest SHA256 (`FROM ubuntu:24.04@sha256:...`). Idem pour `node:22-slim` | `Dockerfile` | Moyenne (sécu) |
+| B7 | **Dependency confusion (pip)** : `requirements.txt` utilise des ranges `>=` (ex: `fastapi>=0.115,<1`) — un attaquant peut publier une version supérieure vérolée sur PyPI. Pinner les versions exactes avec hashes (`==X.Y.Z --hash=sha256:...`) via `pip-compile` | `requirements.txt` | Moyenne (sécu) |
+| B8 | **CI `ubuntu-latest`** : les workflows GitHub Actions utilisent `runs-on: ubuntu-latest` (tag mutable) + installent des outils sans version pinnée (`pip install pytest`) — dependency confusion CI | `.github/workflows/` | Moyenne (sécu) |
+| B9 | **Sandbox insuffisant** : `sandbox.py` n'applique que des rlimits (CPU, RAM, nproc). Le binaire exécuté partage le même namespace réseau/PID/filesystem que le backend → un `execve("/bin/sh")` ou `connect()` donne accès au système. Nécessite nsjail ou équivalent. | `sandbox.py` | **Critique** (sécu) |
 
 ---
 
@@ -428,24 +433,93 @@ Visualisation en blocs :
 | 8.2 | ~~**I9**~~ ✅ | nginx.conf : `server_tokens off`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, dotfiles bloqués, `client_max_body_size 1m`, logs stdout/stderr | Faible |
 | 8.3 | ~~**I10**~~ ✅ | docker-compose.yml : `read_only: true`, `cap_drop: ALL`, `cap_add` minimal (5 caps), `no-new-privileges`, tmpfs ciblés, limites CPU/RAM | Faible |
 
-### Sprint 9 — Polish & Nice to have ✨
+### Sprint 9 — Supply Chain Hardening 🔗
+> Fixer toutes les vulnérabilités de dependency confusion signalées par Romsnack.
+
+| # | Item | Description | Effort |
+|---|------|-------------|--------|
+| 9.1 | **B5** | `package.json` : pinner les versions exactes (retirer `^`), ajouter `.npmrc` avec `save-exact=true` | Faible |
+| 9.2 | **B6** | `Dockerfile` : pinner `node:22-slim` et `ubuntu:24.04` par digest SHA256 (`@sha256:...`) | Faible |
+| 9.3 | **B7** | `requirements.txt` : pinner les versions exactes (`==X.Y.Z`), idéalement avec hashes via `pip-compile --generate-hashes` | Faible |
+| 9.4 | **B8** | CI : `runs-on: ubuntu-24.04` au lieu de `ubuntu-latest`, pinner les versions des actions GitHub (`@v4` → `@sha`) | Faible |
+| 9.5 | **B9** | CI : pinner les versions des outils installés dans les steps (`pip install pytest==X.Y.Z`, etc.) | Faible |
+
+### Sprint 10 — Sandbox & Isolation (pré-VPS) 🛡️
+> **Objectif** : isoler le code assembleur exécuté pour que même un syscall malveillant ne puisse pas attaquer le système hôte. C'est LE sprint critique avant tout déploiement public.
+>
+> **Problème actuel** : le binaire assemblé tourne dans le même namespace réseau/PID/filesystem que le backend FastAPI. Un `execve("/bin/sh")` ou un `connect()` donne un shell/réseau complet. Les rlimits dans `sandbox.py` ne limitent que les ressources, pas les permissions.
+>
+> **Modèle cible** : chaque binaire exécuté tourne dans un conteneur éphémère isolé (inspiré pwn.college), ou au minimum dans un namespace isolé par nsjail/bubblewrap.
+
+| # | Item | Description | Effort | Priorité |
+|---|------|-------------|--------|----------|
+| 10.1 | **Sandbox nsjail** | Remplacer `sandbox.py` (rlimits) par nsjail pour l'exécution GDB+binaire. Chaque session = un jail avec : mount namespace (rootfs readonly), PID namespace, network namespace (no network), user namespace (nobody), seccomp profile strict, cgroups (CPU+RAM). Installer nsjail dans le Dockerfile. | Élevé | P0 |
+| 10.2 | **Seccomp pour le binaire** | Appliquer le profil `seccomp-profile.json` au processus GDB inférieur (le binaire exécuté), pas au conteneur entier. Utiliser `prctl(PR_SET_SECCOMP)` ou la config nsjail. Laisser GDB lui-même hors seccomp (il a besoin de ptrace). | Moyen | P0 |
+| 10.3 | **Network isolation** | Le binaire utilisateur ne doit JAMAIS pouvoir ouvrir de socket. Bloquer `socket`, `connect`, `bind`, `listen`, `accept` dans le seccomp, et isoler dans un network namespace vide (nsjail `--disable_clone_newnet=false`). | Faible | P0 |
+| 10.4 | **Filesystem isolation** | Le binaire ne voit que son workspace tmpfs (`/tmp/asm-xxx/`). Pas d'accès à `/app`, `/etc`, `/home`, `/proc` (sauf son propre PID via GDB). Mount namespace avec bind mounts minimaux. | Moyen | P0 |
+| 10.5 | **Limiter sessions à 5** | Configurer `ASMBLE_MAX_SESSIONS=5` par défaut pour VPS. Chaque session = 1 jail nsjail. Afficher le nombre de sessions restantes dans le health endpoint. | Faible | P1 |
+| 10.6 | **Timeout session auto** | Auto-cleanup des sessions inactives après 10 minutes (pas de WebSocket activity). Évite l'accumulation de jails zombies. | Faible | P1 |
+| 10.7 | **Monitoring sessions** | Logger les créations/destructions de sessions, les échecs d'assemblage, les timeouts. Exposer des métriques basiques dans `/api/health/detailed`. | Faible | P2 |
+
+#### Architecture nsjail cible
+
+```
+┌─ Docker container (read-only rootfs) ──────────────────────┐
+│  supervisord                                               │
+│  ├── nginx :8080 (reverse proxy)                           │
+│  └── uvicorn :8000 (FastAPI)                               │
+│       │                                                    │
+│       ├── Session 1                                        │
+│       │   └── nsjail ─── GDB ─── binaire.elf               │
+│       │       ├── PID namespace (isolé)                    │
+│       │       ├── Network namespace (vide, pas de réseau)  │
+│       │       ├── Mount namespace (only /tmp/asm-xxx/)     │
+│       │       ├── Seccomp (whitelist syscalls)             │
+│       │       └── Cgroups (CPU 10s, RAM 256MB)             │
+│       │                                                    │
+│       ├── Session 2                                        │
+│       │   └── nsjail ─── GDB ─── binaire.elf               │
+│       │       └── (même isolation)                         │
+│       └── ...                                              │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### Pourquoi nsjail et pas Docker-in-Docker ?
+- **nsjail** : léger (~1 binaire), conçu exactement pour ça (Google l'utilise pour ses CTF platforms), pas besoin de Docker socket, latence minimale (~10ms de setup).
+- **DinD** : lourd, nécessite `--privileged` ou Docker socket bind mount (pire pour la sécu), latence de ~2-5s pour chaque session.
+- **bubblewrap** : alternative viable mais moins de features (pas de cgroups intégrés, pas de seccomp intégré).
+
+### Sprint 11 — Exploit Tools natifs pwndbg 🔧
+> **Objectif** : remplacer l'implémentation custom de `exploit_tools.py` par les commandes natives de pwndbg (plus fiables, plus complètes, déjà installé).
+>
+> **Problème actuel** : `exploit_tools.py` réimplémente De Bruijn cyclic et appelle ROPgadget en subprocess — alors que pwndbg fournit `cyclic`, `cyclic -l`, `rop` nativement dans GDB.
+
+| # | Item | Description | Effort |
+|---|------|-------------|--------|
+| 11.1 | **Cyclic via pwndbg** | Remplacer `cyclic()` et `cyclic_find()` par des commandes GDB via le bridge : `cyclic 200` → parse output, `cyclic -l 0x61616162` → parse offset. Supprimer `_de_bruijn()` custom. | Faible |
+| 11.2 | **ROP via pwndbg** | Remplacer l'appel subprocess à ROPgadget par `rop` de pwndbg via GDB. Parse la sortie. Avantage : pas besoin de ROPgadget installé séparément. | Faible |
+| 11.3 | **Cleanup exploit_tools.py** | Soit supprimer le fichier entier (tout passe par GDB bridge), soit le garder comme fallback si pwndbg n'est pas dispo (mode dégradé). | Faible |
+| 11.4 | **Nouveaux outils pwndbg** | Exposer d'autres commandes pwndbg utiles : `checksec` natif, `heap` (pour futur Phase 3c), `search` (pattern in memory), `telescope` (stack inspection). | Moyen |
+
+### Sprint 12 — Polish & Nice to have ✨
 > Dernières couches de polish.
 
 | # | Item | Description | Effort |
 |---|------|-------------|--------|
-| 8.1 | **U1** | Thème clair (light mode) | Moyen |
-| 8.2 | **Q29** | Thème adaptatif (prefers-color-scheme) | Dépend U1 |
-| 8.3 | **Q28** | Mode compact (responsive) | Moyen |
-| 8.4 | **U8** | Terminal interactif (stdin) | Moyen |
-| 8.5 | **Q3** | Terminal flottant (détachable) | Faible |
-| 8.6 | **Q4** | Mini-terminal inline | Faible |
-| 8.7 | **Q15** | FAB (Floating Action Button) | Faible |
+| 12.1 | **U1** | Thème clair (light mode) | Moyen |
+| 12.2 | **Q29** | Thème adaptatif (prefers-color-scheme) | Dépend U1 |
+| 12.3 | **Q28** | Mode compact (responsive) | Moyen |
+| 12.4 | **U8** | Terminal interactif (stdin) | Moyen |
+| 12.5 | **Q3** | Terminal flottant (détachable) | Faible |
+| 12.6 | **Q4** | Mini-terminal inline | Faible |
+| 12.7 | **Q15** | FAB (Floating Action Button) | Faible |
 
 ### Long terme 🔭
 
 | # | Item | Description |
 |---|------|-------------|
-| 9.1 | **P11-P16** | Phase 3c : heap visualizer |
-| 9.2 | **P17-P21** | Phase 3d : multi-architecture (ARM64, RISC-V) |
-| 9.3 | **Q17** | Drag & drop layout |
-| 9.4 | **U6-U7** | Mode collaboratif + exercices intégrés |
+| L1 | **P11-P16** | Phase 3c : heap visualizer |
+| L2 | **P17-P21** | Phase 3d : multi-architecture (ARM64, RISC-V) |
+| L3 | **Q17** | Drag & drop layout |
+| L4 | **U6-U7** | Mode collaboratif + exercices intégrés |
+| L5 | **VPS public** | Déployer sur VPS avec nsjail (Sprint 10), rate limiting par IP, auth optionnelle, HTTPS (Let's Encrypt) |
