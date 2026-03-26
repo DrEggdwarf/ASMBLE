@@ -20,7 +20,7 @@ interface Props {
 function Badge({ label, safe }: { label: string; safe: boolean }) {
   return (
     <span className={`asm-sec-badge ${safe ? 'safe' : 'unsafe'}`}>
-      {safe ? '\u2714' : '\u2716'} {label}
+      {safe ? <i className="fa-solid fa-check" /> : <i className="fa-solid fa-xmark" />} {label}
     </span>
   )
 }

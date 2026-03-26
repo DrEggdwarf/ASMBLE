@@ -3844,15 +3844,40 @@
 }
 
 /* Tooltip below variant */
-[data-tip-pos="bottom"]::after {
+[data-tip-pos="bottom"]::after,
+.asm-header [data-tip]::after,
+.asm-controls [data-tip]::after {
   bottom: auto;
   top: calc(100% + 8px);
 }
-[data-tip-pos="bottom"]::before {
+[data-tip-pos="bottom"]::before,
+.asm-header [data-tip]::before,
+.asm-controls [data-tip]::before {
   bottom: auto;
   top: calc(100% + 4px);
   border-top-color: transparent;
   border-bottom-color: var(--asm-border-muted);
+}
+
+/* FAB tooltips: show to the left */
+.asm-fab-menu [data-tip]::after,
+.asm-fab[data-tip]::after {
+  bottom: auto;
+  top: 50%;
+  left: auto;
+  right: calc(100% + 10px);
+  transform: translateY(-50%);
+}
+.asm-fab-menu [data-tip]::before,
+.asm-fab[data-tip]::before {
+  bottom: auto;
+  top: 50%;
+  left: auto;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-left-color: var(--asm-border-muted);
 }
 
 /* ============================================
@@ -4159,6 +4184,22 @@
   background: var(--asm-bg-blue-hover);
   color: var(--asm-blue);
   border-color: var(--asm-blue-border);
+}
+
+/* Font Awesome icon spacing in buttons */
+.asm-btn i.fa-solid,
+.asm-ref-btn i.fa-solid,
+.asm-file-btn i.fa-solid,
+.asm-right-tool i.fa-solid,
+.asm-tour-btn i.fa-solid,
+.asm-statusbar-ref i.fa-solid,
+.asm-terminal-action i.fa-solid {
+  margin-right: 4px;
+}
+.asm-fab-item i.fa-solid,
+.asm-tab-collapse i.fa-solid,
+.asm-col-collapsed-icon i.fa-solid {
+  margin: 0;
 }
 
 /* ============================================

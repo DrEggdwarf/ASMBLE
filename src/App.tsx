@@ -485,21 +485,21 @@ export default function AsmDebugger() {
           />
         )}
         <button className="asm-ref-btn" onClick={() => setRefModalOpen(true)} data-tip="Référence x86-64
-Instructions, syscalls, convention d'appel">? Ref</button>
+Instructions, syscalls, convention d'appel"><i className="fa-solid fa-book" /> Ref</button>
         <button className="asm-ref-btn" onClick={() => setPaletteOpen(true)} data-tip="Palette de commandes
-Raccourci : Ctrl+K">&#9654; Ctrl+K</button>
-        <button className="asm-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} data-tip={`Thème : ${theme === 'dark' ? 'sombre' : 'clair'}\nCliquer pour basculer`}>{theme === 'dark' ? '☀️' : '🌙'}</button>
+Raccourci : Ctrl+K"><i className="fa-solid fa-terminal" /> Ctrl+K</button>
+        <button className="asm-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} data-tip={`Thème : ${theme === 'dark' ? 'sombre' : 'clair'}\nCliquer pour basculer`}><i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`} /></button>
         <div className="asm-controls">
           {/* Exécution */}
           <div className="asm-ctrl-group">
             <span className="asm-ctrl-label">Exécution</span>
             <div className="asm-ctrl-buttons">
               <button className="asm-btn run" onClick={handleRun} disabled={isTracing} data-tip="Assembler et exécuter le programme
-Raccourci : F5">{isTracing ? '⏳ Tracing…' : '▶ Build & Run'}</button>
+Raccourci : F5">{isTracing ? <><i className="fa-solid fa-spinner fa-pulse" /> Tracing…</> : <><i className="fa-solid fa-play" /> Build & Run</>}</button>
               <button className="asm-btn" onClick={handleRunToBreakpoint} data-tip="Continuer jusqu'au prochain breakpoint
-Raccourci : Shift+F5">&#9654;&#124; Breakpoint</button>
+Raccourci : Shift+F5"><i className="fa-solid fa-forward-step" /> Breakpoint</button>
               {IS_LIVE && <button className="asm-btn" onClick={() => gdb.continueExec()} disabled={gdb.state !== 'connected' || gdb.stepping} data-tip="Continue l'exécution jusqu'au
-prochain breakpoint ou la fin du programme">&#9654;&#9654;&#124; Continue</button>}
+prochain breakpoint ou la fin du programme"><i className="fa-solid fa-forward" /> Continue</button>}
             </div>
           </div>
           <div className="asm-ctrl-sep" />
@@ -508,15 +508,15 @@ prochain breakpoint ou la fin du programme">&#9654;&#9654;&#124; Continue</butto
             <span className="asm-ctrl-label">Pas à pas</span>
             <div className="asm-ctrl-buttons">
               <button className={`asm-btn ${canBack ? 'active' : ''}`} disabled={!canBack} onClick={() => { if (IS_LIVE) { setLiveStepIdx(i => Math.max(0, i - 1)) } else { setStep(s => s - 1) } }} data-tip="Revenir au step précédent
-Navigue dans l'historique d'exécution">&larr; Back</button>
+Navigue dans l'historique d'exécution"><i className="fa-solid fa-chevron-left" /> Back</button>
               <button className={`asm-btn primary ${canForward ? 'active' : ''}`} disabled={!canForward} onClick={() => { if (IS_LIVE) { if (!atLatest) { setLiveStepIdx(i => i + 1) } else { gdb.step() } } else { setStep(s => s + 1) } }} data-tip="Exécuter l'instruction suivante
-Raccourci : F11 (Step Into)">Next &rarr;</button>
+Raccourci : F11 (Step Into)">Next <i className="fa-solid fa-chevron-right" /></button>
               {IS_LIVE && <button className={`asm-btn ${canForward && atLatest ? 'active' : ''}`} disabled={!canForward || !atLatest} onClick={() => gdb.stepOver()} data-tip="Step over : exécute sans entrer
 dans les CALL/fonctions
-Raccourci : F10">Over &#8631;</button>}
+Raccourci : F10"><i className="fa-solid fa-share" /> Over</button>}
               {IS_LIVE && <button className={`asm-btn ${canForward && atLatest ? 'active' : ''}`} disabled={!canForward || !atLatest} onClick={() => gdb.stepOut()} data-tip="Step out : termine la fonction
 en cours et revient à l'appelant
-Raccourci : Shift+F11">Out &#8613;</button>}
+Raccourci : Shift+F11"><i className="fa-solid fa-arrow-up-from-bracket" /> Out</button>}
               <span className={`asm-step-count${gdb.stepping ? ' stepping' : ''}`}>{IS_LIVE ? `step ${currentStep + 1}` : `step ${currentStep + 1}/${steps.length || '?'}`}</span>
             </div>
           </div>
@@ -526,10 +526,10 @@ Raccourci : Shift+F11">Out &#8613;</button>}
             <span className="asm-ctrl-label">Auto</span>
             <div className="asm-ctrl-buttons">
               {isAutoStepping ? (
-                <button className="asm-btn active" onClick={stopAutoStep} data-tip="Pause le stepping automatique">&#9646;&#9646; Pause</button>
+                <button className="asm-btn active" onClick={stopAutoStep} data-tip="Pause le stepping automatique"><i className="fa-solid fa-pause" /> Pause</button>
               ) : (
                 <button className="asm-btn" onClick={startAutoStep} data-tip="Lancer le stepping automatique
-Avance d'un step toutes les Xms">&#9654;&#9654; Play</button>
+Avance d'un step toutes les Xms"><i className="fa-solid fa-play" /> Play</button>
               )}
               <input type="range" className="asm-speed-slider" min="100" max="2000" step="100" value={autoStepSpeed} onChange={e => setAutoStepSpeed(Number(e.target.value))} title={`Vitesse : ${autoStepSpeed}ms par step`} />
               <span className="asm-speed-label">{autoStepSpeed}ms</span>
@@ -538,7 +538,7 @@ Avance d'un step toutes les Xms">&#9654;&#9654; Play</button>
           <div className="asm-ctrl-sep" />
           {/* Reset */}
           <button className="asm-btn" onClick={() => { if (IS_LIVE) { gdb.reset(); setLiveStepIdx(-1) } else { setStep(0) }; stopAutoStep() }} data-tip="Revenir au début du programme
-Recharge le binaire dans GDB">&#8634; Reset</button>
+Recharge le binaire dans GDB"><i className="fa-solid fa-rotate-left" /> Reset</button>
           {IS_LIVE && <span className={`asm-live-dot ${gdb.state}`} title={`Connexion : ${gdb.state}`} />}
         </div>
       </div>
@@ -562,14 +562,14 @@ Recharge le binaire dans GDB">&#8634; Reset</button>
                   reader.readAsText(file)
                 }
                 input.click()
-              }}>&#128194; Import</button>
+              }}><i className="fa-solid fa-folder-open" /> Import</button>
               <button className="asm-file-btn" data-tip="Exporter le code en fichier .asm" data-tip-pos="bottom" onClick={() => {
                 const blob = new Blob([code], { type: 'text/plain' })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url; a.download = 'source.asm'; a.click()
                 URL.revokeObjectURL(url)
-              }}>&#128190; Export</button>
+              }}><i className="fa-solid fa-floppy-disk" /> Export</button>
               {codeHistory.length > 0 && (
                 <select
                   className="asm-file-btn asm-history-select"
@@ -580,14 +580,14 @@ Recharge le binaire dans GDB">&#8634; Reset</button>
                   }}
                   title="Historique des programmes"
                 >
-                  <option value="" disabled>&#128337; Historique</option>
+                  <option value="" disabled>⏱ Historique</option>
                   {codeHistory.map((h, i) => (
                     <option key={h.ts} value={i}>{h.label} — {new Date(h.ts).toLocaleTimeString()}</option>
                   ))}
                 </select>
               )}
               <div className="asm-snippets-wrapper">
-                <button className="asm-file-btn" onClick={() => setSnippetsOpen(v => !v)} title="Snippets templates">&#128221; Snippets</button>
+                <button className="asm-file-btn" onClick={() => setSnippetsOpen(v => !v)} title="Snippets templates"><i className="fa-solid fa-file-code" /> Snippets</button>
                 {snippetsOpen && (
                   <div className="asm-snippets-dropdown">
                     {SNIPPETS.map(s => (
@@ -605,7 +605,7 @@ Recharge le binaire dans GDB">&#8634; Reset</button>
           </div>
           {code.length === 0 && !emptyDismissed && (
             <div className="asm-empty-state">
-              <div className="asm-empty-icon">&#9656;</div>
+              <div className="asm-empty-icon"><i className="fa-solid fa-microchip" /></div>
               <div className="asm-empty-title">Écrivez du code assembleur x86-64</div>
               <div className="asm-empty-hint">ou choisissez un template pour commencer</div>
               <div className="asm-empty-templates">
@@ -624,7 +624,7 @@ Recharge le binaire dans GDB">&#8634; Reset</button>
         {/* COL 2: Registers + Flags */}
         <div className="asm-col asm-col-regs" style={{ width: rightCollapsed ? `calc(${cols[1] + cols[2]}% - 28px)` : cols[1] + '%' }}>
           <div className={`asm-annotation ${cur.jumped ? 'jumped' : ''}`}>
-            {cur.jumped && <span className="asm-jump-badge">&#9889; JUMP</span>}
+            {cur.jumped && <span className="asm-jump-badge"><i className="fa-solid fa-bolt" /> JUMP</span>}
             <span>{cur.annotation}</span>
           </div>
           <div className="asm-regs-section">
@@ -698,16 +698,16 @@ Recharge le binaire dans GDB">&#8634; Reset</button>
         {/* COL 3: Panels (collapsible) */}
         {rightCollapsed ? (
           <div className="asm-col-collapsed" onClick={() => setRightCollapsed(false)} title="Expand panel">
-            <span className="asm-col-collapsed-icon">&#9664;</span>
+            <span className="asm-col-collapsed-icon"><i className="fa-solid fa-chevron-left" /></span>
           </div>
         ) : (
         <div className="asm-col asm-col-right" style={{ width: cols[2] + '%' }}>
           <div className="asm-right-toolbar">
-            <button className="asm-tab-collapse" onClick={() => setRightCollapsed(true)} data-tip="Replier le panneau droit">&#9654;</button>
+            <button className="asm-tab-collapse" onClick={() => setRightCollapsed(true)} data-tip="Replier le panneau droit"><i className="fa-solid fa-chevron-right" /></button>
             {IS_LIVE && <button className={`asm-right-tool ${consoleOpen ? 'active' : ''}`} onClick={() => setConsoleOpen(v => !v)} data-tip="Console GDB brute
-Envoyez des commandes GDB directement">&#9002; Console</button>}
+Envoyez des commandes GDB directement"><i className="fa-solid fa-terminal" /> Console</button>}
             <button className={`asm-right-tool ${evalOpen ? 'active' : ''}`} onClick={() => setEvalOpen(v => !v)} data-tip="Évaluateur d'expressions
-Calculez des expressions C/asm en live">&#402; Eval</button>
+Calculez des expressions C/asm en live"><i className="fa-solid fa-calculator" /> Eval</button>
           </div>
           <div className="asm-stacked-panels">
             {/* Stack section */}
@@ -786,7 +786,7 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
             <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} ligne${termOutput.length > 1 ? 's' : ''}` : ''}</span>
             <div className="asm-terminal-actions" onClick={e => e.stopPropagation()}>
               <button className="asm-terminal-action" onClick={() => setTermOutput([])} data-tip="Vider le terminal">clear</button>
-              <button className="asm-terminal-action" onClick={() => { setTermFloating(true); setTermVisible(true) }} data-tip="Détacher le terminal">&#8599;</button>
+              <button className="asm-terminal-action" onClick={() => { setTermFloating(true); setTermVisible(true) }} data-tip="Détacher le terminal"><i className="fa-solid fa-up-right-from-square" /></button>
               <button className="asm-terminal-action" onClick={() => setTermVisible(v => !v)} data-tip={termVisible ? 'Réduire le terminal' : 'Agrandir le terminal'}>{termVisible ? '\u25BC' : '\u25B2'}</button>
             </div>
           </div>
@@ -817,7 +817,7 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
             <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} lignes` : ''}</span>
             <div className="asm-terminal-actions">
               <button className="asm-terminal-action" onClick={() => setTermOutput([])}>clear</button>
-              <button className="asm-terminal-action" onClick={() => setTermFloating(false)} data-tip="Ancrer le terminal">&#8601;</button>
+              <button className="asm-terminal-action" onClick={() => setTermFloating(false)} data-tip="Ancrer le terminal"><i className="fa-solid fa-down-left-and-up-right-to-center" /></button>
               <button className="asm-terminal-action" onClick={() => setTermVisible(false)}>&times;</button>
             </div>
           </div>
@@ -853,8 +853,8 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
           </span>
         )}
         <span className="asm-statusbar-right">
-          <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setTermVisible(v => !v)} title="Toggle terminal">&#9638; Terminal</span>
-          <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setPaletteOpen(true)} title="Ctrl+K">&#9654; Palette</span>
+          <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setTermVisible(v => !v)} title="Toggle terminal"><i className="fa-solid fa-display" /> Terminal</span>
+          <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setPaletteOpen(true)} title="Ctrl+K"><i className="fa-solid fa-terminal" /> Palette</span>
         </span>
       </div>
 
@@ -900,7 +900,7 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
       <div className="asm-toast-container">
         {toasts.map(t => (
           <div key={t.id} className={`asm-toast ${t.kind}`} onClick={() => dismissToast(t.id)}>
-            <span className="asm-toast-icon">{t.kind === 'error' ? '\u2716' : t.kind === 'success' ? '\u2714' : '\u24D8'}</span>
+            <span className="asm-toast-icon">{t.kind === 'error' ? <i className="fa-solid fa-xmark" /> : t.kind === 'success' ? <i className="fa-solid fa-check" /> : <i className="fa-solid fa-circle-info" />}</span>
             <span className="asm-toast-msg">{t.msg}</span>
           </div>
         ))}
@@ -930,14 +930,14 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
       {/* FAB — Floating Action Button */}
       {fabOpen && (
         <div className="asm-fab-menu">
-          <button className="asm-fab-item" onClick={() => { handleRun(); setFabOpen(false) }} data-tip="Build & Run">&#9654;</button>
-          <button className="asm-fab-item" onClick={() => { setRefModalOpen(true); setFabOpen(false) }}>?</button>
-          <button className="asm-fab-item" onClick={() => { setTheme(t => t === 'dark' ? 'light' : 'dark'); setFabOpen(false) }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
-          <button className="asm-fab-item" onClick={() => { setTermVisible(v => !v); setFabOpen(false) }}>&#9638;</button>
-          <button className="asm-fab-item" onClick={() => { setConsoleOpen(v => !v); setFabOpen(false) }}>GDB</button>
+          <button className="asm-fab-item" onClick={() => { handleRun(); setFabOpen(false) }} data-tip="Build & Run"><i className="fa-solid fa-play" /></button>
+          <button className="asm-fab-item" onClick={() => { setRefModalOpen(true); setFabOpen(false) }} data-tip="Référence x86-64"><i className="fa-solid fa-book" /></button>
+          <button className="asm-fab-item" onClick={() => { setTheme(t => t === 'dark' ? 'light' : 'dark'); setFabOpen(false) }} data-tip={theme === 'dark' ? 'Thème clair' : 'Thème sombre'}><i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`} /></button>
+          <button className="asm-fab-item" onClick={() => { setTermVisible(v => !v); setFabOpen(false) }} data-tip="Terminal"><i className="fa-solid fa-display" /></button>
+          <button className="asm-fab-item" onClick={() => { setConsoleOpen(v => !v); setFabOpen(false) }} data-tip="Console GDB"><i className="fa-solid fa-terminal" /></button>
         </div>
       )}
-      <button className={`asm-fab ${fabOpen ? 'open' : ''}`} onClick={() => setFabOpen(f => !f)} data-tip="Actions rapides">&#9776;</button>
+      <button className={`asm-fab ${fabOpen ? 'open' : ''}`} onClick={() => setFabOpen(f => !f)} data-tip="Actions rapides"><i className="fa-solid fa-bars" /></button>
     </div>
   )
 }

@@ -237,11 +237,11 @@ export function GuidedTour({ open, onClose, onPrepare }: GuidedTourProps) {
         <div className="asm-tour-desc">{current.desc}</div>
         <div className="asm-tour-actions">
           {step > 0 && (
-            <button className="asm-tour-btn asm-tour-btn-sec" onClick={prev}>← Précédent</button>
+            <button className="asm-tour-btn asm-tour-btn-sec" onClick={prev}><i className="fa-solid fa-chevron-left" /> Précédent</button>
           )}
           <button className="asm-tour-btn asm-tour-btn-skip" onClick={finish}>Passer</button>
           <button className="asm-tour-btn asm-tour-btn-primary" onClick={next}>
-            {step < TOUR_STEPS.length - 1 ? 'Suivant →' : 'Terminer ✓'}
+            {step < TOUR_STEPS.length - 1 ? <>Suivant <i className="fa-solid fa-chevron-right" /></> : <>Terminer <i className="fa-solid fa-check" /></>}
           </button>
         </div>
       </div>

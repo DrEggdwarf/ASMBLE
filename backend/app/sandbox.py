@@ -70,6 +70,12 @@ def build_gdb_command(binary_path: str, workdir: str) -> list[str]:
         if Path(dev).exists():
             cmd += ["-B", dev]
 
+    # PTY devices (needed for inferior I/O via -inferior-tty-set)
+    if Path("/dev/pts").exists():
+        cmd += ["-B", "/dev/pts"]
+    if Path("/dev/ptmx").exists():
+        cmd += ["-B", "/dev/ptmx"]
+
     # Special filesystems
     cmd += [
         "--mount", "none:/proc:proc",
