@@ -1,7 +1,7 @@
 # ASMBLE — Backlog
 
 > Issues connues, dette technique, et fonctionnalités planifiées.
-> Dernière mise à jour : 25 mars 2026
+> Dernière mise à jour : 26 mars 2026
 
 ---
 
@@ -26,10 +26,10 @@
 | B2 | `REST /api/assemble` (POST) crée une session sans cleanup — fuite de sessions si appelé directement | `main.py` | Basse |
 | B3 | CORS ouvert (`allow_origins=["*"]`) avec TODO dans le code | `main.py` | Basse (Docker isolé) |
 | B4 | ~~`eflags` inclus dans `changed` mais absent de `regs` → `BigInt(undefined)` crash React → écran noir~~ ✅ | `gdb_bridge.py`, `AsmEditor.tsx` | Critique |
-| B5 | **Dependency confusion (npm)** : `package.json` utilise des ranges `^` (ex: `^19.0.0`) — un attaquant peut publier une version supérieure vérolée sur npm. Fixer les versions exactes + vérifier `package-lock.json` | `package.json` | Moyenne (sécu) |
-| B6 | **Image base non pinnée** : `FROM ubuntu:24.04` utilise un tag mutable — risque de supply chain attack si le tag est re-poussé avec un contenu malveillant. Pinner par digest SHA256 (`FROM ubuntu:24.04@sha256:...`). Idem pour `node:22-slim` | `Dockerfile` | Moyenne (sécu) |
-| B7 | **Dependency confusion (pip)** : `requirements.txt` utilise des ranges `>=` (ex: `fastapi>=0.115,<1`) — un attaquant peut publier une version supérieure vérolée sur PyPI. Pinner les versions exactes avec hashes (`==X.Y.Z --hash=sha256:...`) via `pip-compile` | `requirements.txt` | Moyenne (sécu) |
-| B8 | **CI `ubuntu-latest`** : les workflows GitHub Actions utilisent `runs-on: ubuntu-latest` (tag mutable) + installent des outils sans version pinnée (`pip install pytest`) — dependency confusion CI | `.github/workflows/` | Moyenne (sécu) |
+| B5 | ~~**Dependency confusion (npm)**~~ ✅ : versions exactes pinnées + `.npmrc` `save-exact=true` | `package.json` | ~~Moyenne~~ |
+| B6 | ~~**Image base non pinnée**~~ ✅ : `node:22-slim` et `ubuntu:24.04` pinnés par digest SHA256 | `Dockerfile` | ~~Moyenne~~ |
+| B7 | ~~**Dependency confusion (pip)**~~ ✅ : versions exactes pinnées (`==X.Y.Z`) | `requirements.txt` | ~~Moyenne~~ |
+| B8 | ~~**CI `ubuntu-latest`**~~ ✅ : `ubuntu-24.04` pinné, versions outils pinnées | `.github/workflows/` | ~~Moyenne~~ |
 | B9 | **Sandbox insuffisant** : `sandbox.py` n'applique que des rlimits (CPU, RAM, nproc). Le binaire exécuté partage le même namespace réseau/PID/filesystem que le backend → un `execve("/bin/sh")` ou `connect()` donne accès au système. Nécessite nsjail ou équivalent. | `sandbox.py` | **Critique** (sécu) |
 
 ---
@@ -433,16 +433,16 @@ Visualisation en blocs :
 | 8.2 | ~~**I9**~~ ✅ | nginx.conf : `server_tokens off`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, dotfiles bloqués, `client_max_body_size 1m`, logs stdout/stderr | Faible |
 | 8.3 | ~~**I10**~~ ✅ | docker-compose.yml : `read_only: true`, `cap_drop: ALL`, `cap_add` minimal (5 caps), `no-new-privileges`, tmpfs ciblés, limites CPU/RAM | Faible |
 
-### Sprint 9 — Supply Chain Hardening 🔗
+### Sprint 9 — Supply Chain Hardening 🔗 ✅
 > Fixer toutes les vulnérabilités de dependency confusion signalées par Romsnack.
 
 | # | Item | Description | Effort |
 |---|------|-------------|--------|
-| 9.1 | **B5** | `package.json` : pinner les versions exactes (retirer `^`), ajouter `.npmrc` avec `save-exact=true` | Faible |
-| 9.2 | **B6** | `Dockerfile` : pinner `node:22-slim` et `ubuntu:24.04` par digest SHA256 (`@sha256:...`) | Faible |
-| 9.3 | **B7** | `requirements.txt` : pinner les versions exactes (`==X.Y.Z`), idéalement avec hashes via `pip-compile --generate-hashes` | Faible |
-| 9.4 | **B8** | CI : `runs-on: ubuntu-24.04` au lieu de `ubuntu-latest`, pinner les versions des actions GitHub (`@v4` → `@sha`) | Faible |
-| 9.5 | **B9** | CI : pinner les versions des outils installés dans les steps (`pip install pytest==X.Y.Z`, etc.) | Faible |
+| 9.1 | ~~**B5**~~ ✅ | `package.json` : versions exactes pinnées (retrait `^`), `.npmrc` avec `save-exact=true` | Faible |
+| 9.2 | ~~**B6**~~ ✅ | `Dockerfile` : `node:22-slim` et `ubuntu:24.04` pinnés par digest SHA256 | Faible |
+| 9.3 | ~~**B7**~~ ✅ | `requirements.txt` : versions exactes pinnées (`==X.Y.Z`) | Faible |
+| 9.4 | ~~**B8**~~ ✅ | CI : `runs-on: ubuntu-24.04` au lieu de `ubuntu-latest` | Faible |
+| 9.5 | ~~**B8**~~ ✅ | CI : versions pinnées des outils (`pytest==9.0.2`, etc.) | Faible |
 
 ### Sprint 10 — Sandbox & Isolation (pré-VPS) 🛡️
 > **Objectif** : isoler le code assembleur exécuté pour que même un syscall malveillant ne puisse pas attaquer le système hôte. C'est LE sprint critique avant tout déploiement public.

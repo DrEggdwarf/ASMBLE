@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,13 +20,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio httpx pyelftools
+          pip install pytest==9.0.2 pytest-asyncio==1.3.0 httpx==0.28.1 pyelftools==0.32
 
       - name: Run tests
         run: python -m pytest tests/ -v
 
   frontend-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -42,7 +42,7 @@ jobs:
         run: npx vite build
 
   docker-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [backend-tests, frontend-build]
     steps:
       - uses: actions/checkout@v4
