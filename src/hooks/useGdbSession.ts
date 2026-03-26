@@ -43,6 +43,7 @@ interface GdbSession {
   requestCyclic: (length: number, n?: number) => void
   requestCyclicFind: (value: string, n?: number) => void
   requestRop: (filter?: string) => void
+  sendStdin: (text: string) => void
   reset: () => void
   disconnect: () => void
 }
@@ -265,6 +266,7 @@ export function useGdbSession(): GdbSession {
   const requestCyclic = useCallback((length: number, n?: number) => send({ type: 'cyclic', length, ...(n !== undefined && { n }) }), [send])
   const requestCyclicFind = useCallback((value: string, n?: number) => send({ type: 'cyclic_find', value, ...(n !== undefined && { n }) }), [send])
   const requestRop = useCallback((filter?: string) => send({ type: 'rop', ...(filter && { filter }) }), [send])
+  const sendStdin = useCallback((text: string) => send({ type: 'send_stdin', text }), [send])
   const reset = useCallback(() => {
     setHistory([])
     setProgramExited(false)
@@ -305,6 +307,6 @@ export function useGdbSession(): GdbSession {
     addBreakpoint, removeBreakpoint, addWatchpoint, removeWatchpoint,
     evaluate, setRegister, setArgs, gdbCommand, readSection,
     requestChecksec, requestVmmap, requestGot, requestCyclic, requestCyclicFind, requestRop,
-    reset, disconnect,
+    sendStdin, reset, disconnect,
   }
 }

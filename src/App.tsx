@@ -142,6 +142,9 @@ export default function AsmDebugger() {
   const [watchpoints, setWatchpoints] = useState<{ expr: string; kind: string; id: string }[]>([])
   const [watchExpr, setWatchExpr] = useState('')
   const [gdbCmdInput, setGdbCmdInput] = useState('')
+  const [stdinInput, setStdinInput] = useState('')
+  const [termFloating, setTermFloating] = useState(false)
+  const [fabOpen, setFabOpen] = useState(false)
   const [gdbConsoleHistory, setGdbConsoleHistory] = useState<{ cmd: string; output: string }[]>([])
   const [programArgs, setProgramArgs] = useState('')
   const [editingReg, setEditingReg] = useState<string | null>(null)
@@ -159,8 +162,26 @@ export default function AsmDebugger() {
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [evalOpen, setEvalOpen] = useState(false)
   const [tourOpen, setTourOpen] = useState(shouldShowTour)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const stored = localStorage.getItem('asmble_theme')
+    if (stored === 'light' || stored === 'dark') return stored
+    return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  })
   const [codeHistory, setCodeHistory] = useState<HistoryEntry[]>(loadHistory)
   const gdb = useGdbSession()
+
+  // Persist theme
+  useEffect(() => { localStorage.setItem('asmble_theme', theme) }, [theme])
+
+  // Listen for system preference changes
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const handler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('asmble_theme')) setTheme(e.matches ? 'light' : 'dark')
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Restore last code from history on mount
   useEffect(() => {
@@ -441,7 +462,7 @@ export default function AsmDebugger() {
   }, [gdb])
 
   return (
-    <div className="asm-root" ref={rootRef}>
+    <div className="asm-root" ref={rootRef} data-theme={theme}>
       {/* Header */}
       <div className="asm-header">
         <span className="asm-logo">
@@ -467,6 +488,7 @@ export default function AsmDebugger() {
 Instructions, syscalls, convention d'appel">? Ref</button>
         <button className="asm-ref-btn" onClick={() => setPaletteOpen(true)} data-tip="Palette de commandes
 Raccourci : Ctrl+K">&#9654; Ctrl+K</button>
+        <button className="asm-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} data-tip={`Thème : ${theme === 'dark' ? 'sombre' : 'clair'}\nCliquer pour basculer`}>{theme === 'dark' ? '☀️' : '🌙'}</button>
         <div className="asm-controls">
           {/* Exécution */}
           <div className="asm-ctrl-group">
@@ -755,27 +777,66 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
         )}
       </div>
 
-      {/* Terminal drawer */}
-      <div className={`asm-terminal-drawer ${termVisible ? 'open' : ''}`} style={termVisible ? { height: termH + 34 } : undefined}>
-        {termVisible && <div className="asm-terminal-resize" onMouseDown={onTermDown} />}
-        <div className="asm-terminal-drawer-bar" onClick={() => setTermVisible(v => !v)}>
-          <span className="asm-terminal-title">Terminal</span>
-          <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} ligne${termOutput.length > 1 ? 's' : ''}` : ''}</span>
-          <div className="asm-terminal-actions" onClick={e => e.stopPropagation()}>
-            <button className="asm-terminal-action" onClick={() => setTermOutput([])} data-tip="Vider le terminal">clear</button>
-            <button className="asm-terminal-action" onClick={() => setTermVisible(v => !v)} data-tip={termVisible ? 'Réduire le terminal' : 'Agrandir le terminal'}>{termVisible ? '\u25BC' : '\u25B2'}</button>
+      {/* Terminal drawer (docked) */}
+      {!termFloating && (
+        <div className={`asm-terminal-drawer ${termVisible ? 'open' : ''}`} style={termVisible ? { height: termH + 34 } : undefined}>
+          {termVisible && <div className="asm-terminal-resize" onMouseDown={onTermDown} />}
+          <div className="asm-terminal-drawer-bar" onClick={() => setTermVisible(v => !v)}>
+            <span className="asm-terminal-title">Terminal</span>
+            <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} ligne${termOutput.length > 1 ? 's' : ''}` : ''}</span>
+            <div className="asm-terminal-actions" onClick={e => e.stopPropagation()}>
+              <button className="asm-terminal-action" onClick={() => setTermOutput([])} data-tip="Vider le terminal">clear</button>
+              <button className="asm-terminal-action" onClick={() => { setTermFloating(true); setTermVisible(true) }} data-tip="Détacher le terminal">&#8599;</button>
+              <button className="asm-terminal-action" onClick={() => setTermVisible(v => !v)} data-tip={termVisible ? 'Réduire le terminal' : 'Agrandir le terminal'}>{termVisible ? '\u25BC' : '\u25B2'}</button>
+            </div>
           </div>
+          {termVisible && (
+            <div className="asm-terminal-body" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
+              {termOutput.map((line, i) => {
+                const cls = line.startsWith('$') ? 'cmd' : line.toLowerCase().includes('error') ? 'err' : line.startsWith('►') ? 'step' : line.startsWith('  ↳') ? 'output' : 'out'
+                return <div key={i} className={`asm-terminal-line ${cls}`}>{line}</div>
+              })}
+              {IS_LIVE && gdb.state === 'connected' && !gdb.programExited ? (
+                <form className="asm-terminal-stdin" onSubmit={e => { e.preventDefault(); if (stdinInput) { gdb.sendStdin(stdinInput + '\n'); setTermOutput(prev => [...prev, `< ${stdinInput}`]); setStdinInput('') } }}>
+                  <span className="asm-terminal-stdin-prompt">&gt;</span>
+                  <input className="asm-terminal-stdin-input" value={stdinInput} onChange={e => setStdinInput(e.target.value)} placeholder="stdin (entrée programme)..." autoComplete="off" />
+                </form>
+              ) : (
+                <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
+              )}
+            </div>
+          )}
         </div>
-        {termVisible && (
+      )}
+
+      {/* Terminal floating popover */}
+      {termFloating && termVisible && (
+        <div className="asm-terminal-float">
+          <div className="asm-terminal-float-header">
+            <span className="asm-terminal-title">Terminal</span>
+            <span className="asm-terminal-count">{termOutput.length > 0 ? `${termOutput.length} lignes` : ''}</span>
+            <div className="asm-terminal-actions">
+              <button className="asm-terminal-action" onClick={() => setTermOutput([])}>clear</button>
+              <button className="asm-terminal-action" onClick={() => setTermFloating(false)} data-tip="Ancrer le terminal">&#8601;</button>
+              <button className="asm-terminal-action" onClick={() => setTermVisible(false)}>&times;</button>
+            </div>
+          </div>
           <div className="asm-terminal-body" ref={el => { if (el) el.scrollTop = el.scrollHeight }}>
             {termOutput.map((line, i) => {
               const cls = line.startsWith('$') ? 'cmd' : line.toLowerCase().includes('error') ? 'err' : line.startsWith('►') ? 'step' : line.startsWith('  ↳') ? 'output' : 'out'
               return <div key={i} className={`asm-terminal-line ${cls}`}>{line}</div>
             })}
-            <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
+            {IS_LIVE && gdb.state === 'connected' && !gdb.programExited ? (
+              <form className="asm-terminal-stdin" onSubmit={e => { e.preventDefault(); if (stdinInput) { gdb.sendStdin(stdinInput + '\n'); setTermOutput(prev => [...prev, `< ${stdinInput}`]); setStdinInput('') } }}>
+                <span className="asm-terminal-stdin-prompt">&gt;</span>
+                <input className="asm-terminal-stdin-input" value={stdinInput} onChange={e => setStdinInput(e.target.value)} placeholder="stdin (entrée programme)..." autoComplete="off" />
+              </form>
+            ) : (
+              <div className="asm-terminal-cursor">$ <span className="asm-terminal-blink">|</span></div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Status bar */}
       <div className="asm-statusbar">
@@ -786,7 +847,13 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
         <span className="asm-statusbar-item">{code.split('\n').length} lignes</span>
         <span className="asm-statusbar-item">{IS_LIVE ? `step ${currentStep + 1}` : `step ${currentStep + 1}/${steps.length || '?'}`}</span>
         {IS_LIVE && <span className={`asm-statusbar-dot ${gdb.state}`} title={gdb.state} />}
+        {termOutput.length > 0 && !termVisible && (
+          <span className="asm-statusbar-item asm-statusbar-mini-term" onClick={() => setTermVisible(true)} title="Dernier message — cliquer pour ouvrir">
+            {termOutput[termOutput.length - 1]?.slice(0, 50)}
+          </span>
+        )}
         <span className="asm-statusbar-right">
+          <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setTermVisible(v => !v)} title="Toggle terminal">&#9638; Terminal</span>
           <span className="asm-statusbar-item asm-statusbar-ref" onClick={() => setPaletteOpen(true)} title="Ctrl+K">&#9654; Palette</span>
         </span>
       </div>
@@ -859,6 +926,18 @@ Calculez des expressions C/asm en live">&#402; Eval</button>
         if (action === 'open_console') { setConsoleOpen(true) }
         if (action === 'close_console') { setConsoleOpen(false) }
       }} />
+
+      {/* FAB — Floating Action Button */}
+      {fabOpen && (
+        <div className="asm-fab-menu">
+          <button className="asm-fab-item" onClick={() => { handleRun(); setFabOpen(false) }} data-tip="Build & Run">&#9654;</button>
+          <button className="asm-fab-item" onClick={() => { setRefModalOpen(true); setFabOpen(false) }}>?</button>
+          <button className="asm-fab-item" onClick={() => { setTheme(t => t === 'dark' ? 'light' : 'dark'); setFabOpen(false) }}>{theme === 'dark' ? '☀️' : '🌙'}</button>
+          <button className="asm-fab-item" onClick={() => { setTermVisible(v => !v); setFabOpen(false) }}>&#9638;</button>
+          <button className="asm-fab-item" onClick={() => { setConsoleOpen(v => !v); setFabOpen(false) }}>GDB</button>
+        </div>
+      )}
+      <button className={`asm-fab ${fabOpen ? 'open' : ''}`} onClick={() => setFabOpen(f => !f)} data-tip="Actions rapides">&#9776;</button>
     </div>
   )
 }

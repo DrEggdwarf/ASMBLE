@@ -4,6 +4,8 @@ GDB/MI Bridge — Interface pygdbmi vers format StepSnapshot.
 
 from __future__ import annotations
 
+import os
+import pty
 import re
 import time
 
@@ -42,13 +44,23 @@ class GdbBridge:
         self._exit_code: int | None = None
         self._stack_cache: list[StackEntry] = []
         self._bt_cache: list[FrameInfo] = []
+        self._inferior_master_fd: int | None = None  # PTY master for inferior stdin/stdout
+        self._inferior_slave_fd: int | None = None
 
     def start(self) -> None:
         """Lance GDB en mode MI sur le binaire."""
+        # Create PTY pair for inferior I/O
+        master_fd, slave_fd = pty.openpty()
+        self._inferior_master_fd = master_fd
+        self._inferior_slave_fd = slave_fd
+        slave_name = os.ttyname(slave_fd)
+
         self.gdb = GdbController(
             command=self._gdb_command,
             time_to_check_for_additional_output_sec=0.05,
         )
+        # Redirect inferior I/O to PTY
+        self._write(f"-inferior-tty-set {slave_name}")
         # Placer un breakpoint à _start et lancer
         self._write("-break-insert _start")
         resp = self._write("-exec-run")
@@ -300,6 +312,21 @@ class GdbBridge:
             except Exception:
                 pass
             self.gdb = None
+        # Close PTY file descriptors
+        for fd in (self._inferior_master_fd, self._inferior_slave_fd):
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        self._inferior_master_fd = None
+        self._inferior_slave_fd = None
+
+    def send_stdin(self, text: str) -> None:
+        """Envoie du texte sur le stdin de l'inférieur via le PTY."""
+        if self._inferior_master_fd is None:
+            raise RuntimeError("Pas de PTY — session non démarrée")
+        os.write(self._inferior_master_fd, text.encode())
 
     # ── Internals ──────────────────────────────────
 

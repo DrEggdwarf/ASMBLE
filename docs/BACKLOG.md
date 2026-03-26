@@ -475,18 +475,18 @@ Visualisation en blocs :
 | 11.6 | ~~**pwndbg env + nsjail**~~ ✅ | `PWNDBG_VENV_PATH`, `PWNDBG_NO_AUTOUPDATE`, `TERM=dumb` dans Dockerfile + sandbox nsjail. Mount `/opt/pwndbg` et `/app/venv` read-only dans nsjail. | Faible |
 | 11.7 | ~~**13 tests pwndbg**~~ ✅ | Tests unitaires : `_ensure_pwndbg`, parsers cyclic/cyclic_find/rop/telescope/search/checksec. 59 tests total (46→59). | Faible |
 
-### Sprint 12 — Polish & Nice to have ✨
+### Sprint 12 — Polish & Nice to have ✨ ✅
 > Dernières couches de polish.
 
 | # | Item | Description | Effort |
 |---|------|-------------|--------|
-| 12.1 | **U1** | Thème clair (light mode) | Moyen |
-| 12.2 | **Q29** | Thème adaptatif (prefers-color-scheme) | Dépend U1 |
-| 12.3 | **Q28** | Mode compact (responsive) | Moyen |
-| 12.4 | **U8** | Terminal interactif (stdin) | Moyen |
-| 12.5 | **Q3** | Terminal flottant (détachable) | Faible |
-| 12.6 | **Q4** | Mini-terminal inline | Faible |
-| 12.7 | **Q15** | FAB (Floating Action Button) | Faible |
+| 12.1 | ~~**U1**~~ ✅ | Thème clair (light mode) — 90+ variables CSS, palette GitHub Light, syntax highlighting adaptée | Moyen |
+| 12.2 | ~~**Q29**~~ ✅ | Thème adaptatif (prefers-color-scheme) — détection auto + persistance localStorage | Dépend U1 |
+| 12.3 | ~~**Q28**~~ ✅ | Mode compact (responsive) — @media 1200px/768px, layout vertical mobile | Moyen |
+| 12.4 | ~~**U8**~~ ✅ | Terminal interactif (stdin) — PTY pair via `pty.openpty()`, WS `send_stdin` handler, input inline | Moyen |
+| 12.5 | ~~**Q3**~~ ✅ | Terminal flottant (détachable) — bascule dock/float, popover centré 600px | Faible |
+| 12.6 | ~~**Q4**~~ ✅ | Mini-terminal inline — preview dernière ligne dans statusbar | Faible |
+| 12.7 | ~~**Q15**~~ ✅ | FAB (Floating Action Button) — menu radial 5 actions rapides, animation | Faible |
 
 ### Long terme 🔭
 

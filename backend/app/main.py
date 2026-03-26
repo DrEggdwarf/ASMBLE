@@ -349,6 +349,15 @@ async def websocket_endpoint(ws: WebSocket):
         await ws.send_json({"type": "search", "results": results or []})
         return None
 
+    async def _h_send_stdin(data: dict) -> str | None:
+        session = _get(session_id)
+        text = data.get("text", "")
+        if not text:
+            return None
+        if session.bridge:
+            await asyncio.to_thread(session.bridge.send_stdin, text)
+        return None
+
     dispatch: dict[str, object] = {
         "assemble": _h_assemble,
         "run": _h_run,
@@ -376,6 +385,7 @@ async def websocket_endpoint(ws: WebSocket):
         "rop": _h_rop,
         "telescope": _h_telescope,
         "search": _h_search,
+        "send_stdin": _h_send_stdin,
     }
 
     # ── rate limiter (token bucket) ──

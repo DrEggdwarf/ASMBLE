@@ -20,7 +20,8 @@ GitHub: https://github.com/DrEggdwarf/ASMBLE
 - Build & Run (execute) + Step-by-step debug + Continue + Step Over/Out/Back
 - Keyboard shortcuts: F5 Run/Continue, F10 StepOver, F11 StepInto, F9 Breakpoint, Shift variants
 - Auto-step with configurable speed (100ms–2000ms)
-- Terminal: program stdout/stderr, errors, connection status
+- Terminal: program stdout/stderr, errors, connection status, interactive stdin input
+- Terminal modes: docked drawer (resizable) or floating popover (detachable)
 - Lexicon: ~45 instructions + ~15 syscalls with full-text search
 - Convention SysV AMD64 + 9 addressing modes
 - Display modes: hex/dec/bin for registers and stack, multi-format tooltips on hover
@@ -29,10 +30,14 @@ GitHub: https://github.com/DrEggdwarf/ASMBLE
 - Live/mock toggle via `VITE_LIVE_MODE` env var
 - Connection indicator dot in header
 - Security panel: checksec badges (RELRO, NX, PIE, Canary), vmmap table, GOT table, exploit tools (cyclic patterns, ROP gadgets, telescope, search)
+- Theme: dark/light toggle with prefers-color-scheme auto-detection, 90+ CSS custom properties
+- Responsive: @media breakpoints for 1200px (compact controls) and 768px (vertical stack layout)
+- FAB: Floating Action Button with 5 quick actions (run, ref, theme, terminal, GDB console)
 
 **Backend**: Fully operational (Python 3.12+ / FastAPI / pygdbmi)
-- FastAPI WebSocket endpoint (`/api/ws`) — 26 message types
+- FastAPI WebSocket endpoint (`/api/ws`) — 27 message types
 - pygdbmi → StepSnapshot bridge (GDB/MI3 protocol)
+- PTY-based inferior I/O for interactive stdin support
 - Step ~170ms, reset ~1s, build & run ~1.2s
 - Off-by-one fix: highlight matches instruction that caused changes
 - Program exit detection + auto-reset on step after exit
@@ -138,6 +143,7 @@ See `docs/ARCHITECTURE.md` for full details.
 - **Sprint 9** ✅ : Supply chain hardening (pinned deps, SHA256 digests, CI hardened)
 - **Sprint 10** ✅ : Sandbox & Isolation (nsjail, namespace isolation, session management)
 - **Sprint 11** ✅ : Exploit Tools natifs pwndbg (cyclic/rop/telescope/search via GDB bridge)
+- **Sprint 12** ✅ : Polish (thème clair/sombre, responsive, stdin terminal, terminal flottant, FAB)
 - **Phase 3c** 📋 : Heap visualizer
 - **Phase 3d** 📋 : Multi-architecture (ARM64, RISC-V)
 

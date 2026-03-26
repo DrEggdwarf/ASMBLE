@@ -147,7 +147,11 @@ Bridge complet FastAPI ↔ GDB avec stepping temps réel :
 - [ ] Multi-architecture (ARM64, RISC-V via QEMU)
 - [ ] Collaborative mode
 - [ ] Exercices intégrés avec validation auto
-- [ ] Themes (dark/light)
+- [x] Themes (dark/light) — Sprint 12 : variables CSS, thème clair GitHub-style, prefers-color-scheme
+- [x] Responsive / compact mode — Sprint 12 : @media breakpoints 1200px/768px
+- [x] Terminal interactif (stdin) — Sprint 12 : PTY pair, WS `send_stdin`
+- [x] Terminal flottant — Sprint 12 : dock/float toggle
+- [x] FAB (Floating Action Button) — Sprint 12 : menu radial actions rapides
 
 ---
 
