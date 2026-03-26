@@ -4,9 +4,11 @@ GDB/MI Bridge — Interface pygdbmi vers format StepSnapshot.
 
 from __future__ import annotations
 
+import fcntl
 import os
 import pty
 import re
+import select
 import time
 
 from pygdbmi.gdbcontroller import GdbController
@@ -110,6 +112,8 @@ class GdbBridge:
         resp = self._write("-exec-continue")
         self._wait_for_stop(resp)
         if self._exited:
+            # Small delay to let PTY buffer fill with program output
+            time.sleep(0.1)
             output = self._drain_output()
             code = self._exit_code if self._exit_code is not None else 0
             return StepSnapshot(
@@ -426,10 +430,34 @@ class GdbBridge:
         return resp
 
     def _drain_output(self) -> list[str]:
-        """Vide et retourne la sortie programme accumulée."""
+        """Vide et retourne la sortie programme accumulée (MI + PTY)."""
+        # Read any remaining data from the PTY master fd
+        self._read_pty()
         out = list(self._pending_output)
         self._pending_output.clear()
         return out
+
+    def _read_pty(self) -> None:
+        """Read available data from the PTY master fd (non-blocking)."""
+        if self._inferior_master_fd is None:
+            return
+        data = b""
+        try:
+            while True:
+                r, _, _ = select.select([self._inferior_master_fd], [], [], 0.05)
+                if not r:
+                    break
+                chunk = os.read(self._inferior_master_fd, 4096)
+                if not chunk:
+                    break
+                data += chunk
+        except OSError:
+            pass
+        if data:
+            text = data.decode("utf-8", errors="replace").strip()
+            if text:
+                for line in text.splitlines():
+                    self._pending_output.append(line)
 
     def _read_state(self) -> StepSnapshot:
         """Lit l'état complet de GDB et construit un StepSnapshot."""
